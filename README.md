@@ -1,8 +1,8 @@
 # DOUBLE AGENT: BLACKOUT PROTOCOL
 
-Milestone B1 development source - October 15, 2026.
+Milestone B1 development source — October 15, 2026.
 
-A browser-native multiplayer investigation game built with React, Three.js / React Three Fiber, an authoritative Node WebSocket server, and PostgreSQL. One implemented mystery: **The Ninety-Second Ghost**. Supports two-player cooperative play against an NPC and a 3-8-player mode with one hidden human traitor.
+A browser-native multiplayer investigation game built with React, Three.js / React Three Fiber, an authoritative Node WebSocket server, and PostgreSQL. One implemented mystery: **The Ninety-Second Ghost**. Supports two-player cooperative play against an NPC and a 3–8-player mode with one hidden human traitor.
 
 **Status:** the production bundle and 23 automated rules/database tests have passed. The local 3D landing scene was rendered at desktop and mobile sizes. A Vercel/Neon hosting adapter is implemented and tested at the shared-database boundary. Public multiplayer verification is still pending. This is an implementation checkpoint, not a completed public release.
 

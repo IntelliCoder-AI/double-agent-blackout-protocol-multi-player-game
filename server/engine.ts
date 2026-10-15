@@ -88,13 +88,13 @@ export class Engine {
           if(s.kind==='evidence') {const e=t.evidence.find(e=>e.id===s.id)!;need(e.grantedTo===p.id||this.elapsed(t,now)>=this.timing.escrow,'Your partner has this decryption key. Shared recovery unlocks at 02:00.','LOCKED');need(!e.discoveredBy.includes(p.id)||(!e.sharedBy&&this.elapsed(t,now)>=this.timing.escrow),'Already recovered.');t.channels[p.id]={kind:'scan',target:e.id,station:s.id,endsAt:now+this.timing.scan,startedAt:now};}
           else if(s.kind==='verify'){need((t.jammed[s.id]??0)<=now,'This terminal is jammed. Use the other verifier.');const e=t.evidence.find(e=>e.id===a.evidence);need(e&&(e.discoveredBy.includes(p.id)||e.sharedBy),'Select a discovered record.');need(!e.verified,'This record is already verified.');t.channels[p.id]={kind:'verify',target:e.id,station:s.id,endsAt:now+(t.repairs['repair-clock'].complete?this.timing.verify*2/3:this.timing.verify),startedAt:now};}
           else if(s.kind==='abort'){need(t.exfil,'No upload is active.');t.channels[p.id]={kind:'abort',target:'exfil',station:s.id,endsAt:now+6000,startedAt:now};}
-          else throw new GameError('USE_PANEL','Use this station's interaction panel.');
+          else throw new GameError('USE_PANEL','Use this station’s interaction panel.');
         }else if(c.type==='evidence.share'){
           this.near(p,'board');const e=t.evidence.find(e=>e.id===a.evidence);need(e&&e.discoveredBy.includes(p.id),'Recover this record first.');need(!e.sharedBy,'This record is already on the wall.');e.sharedBy=p.id;this.log(t,`${p.name} pinned ${e.title}.`,now);
         }else if(c.type==='evidence.compare'){
           this.near(p,'board');const e=t.evidence.find(e=>e.id===a.from),f=t.evidence.find(e=>e.id===a.to);need(e&&f&&e.sharedBy&&f.sharedBy&&e.verified&&f.verified,'Both sources must be shared and verified.');
           const pair=[e.id,f.id].sort().join('|');let label='',explanation='';
-          if(pair==='clock|footage'&&a.relation==='corrected-time'){need(a.value==='02:14:00','Subtract the displayed 90-second offset from 02:15:30.');label='Clock corrected';explanation='02:15:30 - 90 seconds = 02:14:00 UTC. The export and clock are now aligned.';}
+          if(pair==='clock|footage'&&a.relation==='corrected-time'){need(a.value==='02:14:00','Subtract the displayed 90-second offset from 02:15:30.');label='Clock corrected';explanation='02:15:30 − 90 seconds = 02:14:00 UTC. The export and clock are now aligned.';}
           else if(pair==='event|reader'&&a.relation==='same-event'){need(a.value==='E-401','Read the event identifiers on both signed records.');label='Same breach event';explanation='Both authenticated records describe E-401. Compare the two access groups to identify the same operator.';}
           else throw new GameError('UNSUPPORTED_COMPARISON','Use the clock/footage or core-bay/access-log comparator.');
           need(!t.links.some(l=>l.id===pair),'This comparison is already supported.');t.links.push({id:pair,from:e.id,to:f.id,label,explanation,author:p.id});

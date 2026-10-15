@@ -2,7 +2,7 @@
 
 Recorded October 15, 2026. **B1 remains in progress; there is no public deployment yet.**
 
-## Hosted adapter checkpoint - October 16, 2026 (India)
+## Hosted adapter checkpoint — October 16, 2026 (India)
 
 - Added Vercel HTTP API and HTTPS client synchronization backed by a dedicated Neon database.
 - Production TypeScript/Vite/esbuild build: passed. Full automated suite: **23 passed, 0 failed, 0 skipped**.
@@ -19,16 +19,16 @@ Recorded October 15, 2026. **B1 remains in progress; there is no public deployme
 | TypeScript strict check | PASS | Included in the final production build, including server, client and test sources |
 | Production client and server build | PASS | Vite 7.3.7 + esbuild; server and migration entry points generated |
 | Automated rules / SQL tests | **22 passed, 0 failed, 0 skipped** | `npm test`; final run approximately 5.17 seconds |
-| Case validity across roster sizes | PASS | 35 generated rounds for each 3-8-player roster; exactly one culprit in the group intersection |
-| Mandatory clue separation | PASS | 100 distributions for each 2-8-player roster; identifying fragments never share an initial owner |
+| Case validity across roster sizes | PASS | 35 generated rounds for each 3–8-player roster; exactly one culprit in the group intersection |
+| Mandatory clue separation | PASS | 100 distributions for each 2–8-player roster; identifying fragments never share an initial owner |
 | Role and clue projection | PASS at engine boundary | Only the requesting role/private clues appear; unpublished case data and other guest session identities are absent |
 | Rule validation | PASS at engine boundary | Unauthorized sabotage, stale rounds, remote interactions, invalid inputs, unsupported comparisons, duplicate effects and missing ballot evidence rejected |
 | Sabotage and exfiltration | PASS at engine boundary | Charges/cooldown, immutable forgery receipt, second-verifier counterplay, abort, repair lockout and upload victory |
 | Voting / reconnect / rematch | PASS at engine boundary | Correct/wrong indictment, ties, abstention, runoff, draw, quorum failure, host migration, frozen deadline, persistent score and new round |
 | SQL persistence / atomic receipts | PASS | Actual embedded PostgreSQL schema, stored sessions/rooms, duplicate-command rollback and deletion |
 | Server initialization | PASS in development | Real Node HTTP/WebSocket server reached its listening state using embedded PostgreSQL |
-| Local desktop 3D render | PASS | Headless Chromium, local-file render of the actual client, 1440x1000; canvas present; no JavaScript page errors; no horizontal overflow |
-| Local mobile-size 3D render | PASS | Same renderer at 390x844; canvas present; no JavaScript page errors; no horizontal overflow |
+| Local desktop 3D render | PASS | Headless Chromium, local-file render of the actual client, 1440×1000; canvas present; no JavaScript page errors; no horizontal overflow |
+| Local mobile-size 3D render | PASS | Same renderer at 390×844; canvas present; no JavaScript page errors; no horizontal overflow |
 | Independent desktop browser multiplayer | **BLOCKED / not passed** | Browser launched, but navigation to the local server failed with `net::ERR_NETWORK_ACCESS_DENIED` |
 | Mobile browser room flow | **BLOCKED / not passed** | Same network denial before application navigation; emulation only, not a real-device test |
 | Native PostgreSQL service connection | **BLOCKED / not tested** | OS returned permission denied for loopback TCP; SQL tests used embedded PostgreSQL instead |

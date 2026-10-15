@@ -2474,7 +2474,7 @@ Section 8 -- Interpretation.
 Creative Commons is not a party to its public
 licenses. Notwithstanding, Creative Commons may elect to apply one of
 its public licenses to material it publishes and in those instances
-will be considered the "Licensor." The text of the Creative Commons
+will be considered the “Licensor.” The text of the Creative Commons
 public licenses is dedicated to the public domain under the CC0 Public
 Domain Dedication. Except for the limited purpose of indicating that
 material is shared under a Creative Commons public license or as
@@ -3010,13 +3010,13 @@ SOFTWARE.
 ========================================================================
 pg-int8 1.0.1 / LICENSE
 ========================================================================
-Copyright c 2017, Charmander <~@charmander.me>
+Copyright © 2017, Charmander <~@charmander.me>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
 copyright notice and this permission notice appear in all copies.
 
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
 REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
 FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
 INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
@@ -3988,7 +3988,7 @@ Repository: git+https://github.com/paulmillr/chokidar.git
 > Copyright (c) 2012-2019 Paul Miller (https://paulmillr.com), Elan Shanker
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy
-> of this software and associated documentation files (the "Software"), to deal
+> of this software and associated documentation files (the “Software”), to deal
 > in the Software without restriction, including without limitation the rights
 > to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 > copies of the Software, and to permit persons to whom the Software is
@@ -3997,7 +3997,7 @@ Repository: git+https://github.com/paulmillr/chokidar.git
 > The above copyright notice and this permission notice shall be included in
 > all copies or substantial portions of the Software.
 > 
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 > IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 > FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 > AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -4026,7 +4026,7 @@ Repository: sindresorhus/date-time
 
 ## fill-range
 License: MIT
-By: Jon Schlinkert, Edo Rivai, Paul Miller, Rouven We�ling
+By: Jon Schlinkert, Edo Rivai, Paul Miller, Rouven Weßling
 Repository: jonschlinkert/fill-range
 
 > The MIT License (MIT)
@@ -4170,7 +4170,7 @@ Repository: micromatch/is-glob
 
 ## is-number
 License: MIT
-By: Jon Schlinkert, Olsten Larck, Rouven We�ling
+By: Jon Schlinkert, Olsten Larck, Rouven Weßling
 Repository: jonschlinkert/is-number
 
 > The MIT License (MIT)
@@ -4430,7 +4430,7 @@ Repository: sindresorhus/time-zone
 
 ## to-regex-range
 License: MIT
-By: Jon Schlinkert, Rouven We�ling
+By: Jon Schlinkert, Rouven Weßling
 Repository: micromatch/to-regex-range
 
 > The MIT License (MIT)
@@ -4626,7 +4626,7 @@ three 0.185.1 / LICENSE
 ========================================================================
 The MIT License
 
-Copyright c 2010-2026 three.js authors
+Copyright © 2010-2026 three.js authors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -4652,7 +4652,7 @@ tinyglobby 0.2.17 / LICENSE
 ========================================================================
 MIT License
 
-Copyright (c) 2024 Madeline Gurriar�n
+Copyright (c) 2024 Madeline Gurriarán
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -5085,11 +5085,11 @@ By: Jon Schlinkert, Brian Woodward, Elan Shanker, Eugene Sharygin, hemanth.hm
 Repository: https://github.com/micromatch/braces
 
 License: MIT
-By: Jon Schlinkert, Edo Rivai, Paul Miller, Rouven We�ling
+By: Jon Schlinkert, Edo Rivai, Paul Miller, Rouven Weßling
 Repository: https://github.com/jonschlinkert/fill-range
 
 License: MIT
-By: Jon Schlinkert, Olsten Larck, Rouven We�ling
+By: Jon Schlinkert, Olsten Larck, Rouven Weßling
 Repository: https://github.com/jonschlinkert/is-number
 
 > The MIT License (MIT)
@@ -5172,7 +5172,7 @@ Repository: https://github.com/paulmillr/chokidar
 > Copyright (c) 2012-2019 Paul Miller (https://paulmillr.com), Elan Shanker
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy
-> of this software and associated documentation files (the "Software"), to deal
+> of this software and associated documentation files (the “Software”), to deal
 > in the Software without restriction, including without limitation the rights
 > to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 > copies of the Software, and to permit persons to whom the Software is
@@ -5181,7 +5181,7 @@ Repository: https://github.com/paulmillr/chokidar
 > The above copyright notice and this permission notice shall be included in
 > all copies or substantial portions of the Software.
 > 
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 > IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 > FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 > AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -5319,7 +5319,7 @@ Repository: https://github.com/expressjs/cors
 
 ## cross-spawn
 License: MIT
-By: Andr� Cruz
+By: André Cruz
 Repository: https://github.com/moxystudio/node-cross-spawn
 
 > The MIT License (MIT)
@@ -5499,7 +5499,7 @@ License: BSD-2-Clause
 By: Felix Boehm
 Repository: https://github.com/fb55/entities
 
-> Copyright (c) Felix B�hm
+> Copyright (c) Felix Böhm
 > All rights reserved.
 > 
 > Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -5579,7 +5579,7 @@ Repository: https://github.com/Rich-Harris/estree-walker
 
 ## etag
 License: MIT
-By: Douglas Christopher Wilson, David Bj�rklund
+By: Douglas Christopher Wilson, David Björklund
 Repository: https://github.com/jshttp/etag
 
 > (The MIT License)
@@ -5642,7 +5642,7 @@ License: MIT
 By: Ruben Verborgh, Olivier Lalonde, James Talmage
 Repository: https://github.com/follow-redirects/follow-redirects
 
-> Copyright 2014-present Olivier Lalonde <olalonde@gmail.com>, James Talmage <james@talmage.io>, Ruben Verborgh
+> Copyright 2014–present Olivier Lalonde <olalonde@gmail.com>, James Talmage <james@talmage.io>, Ruben Verborgh
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy of
 > this software and associated documentation files (the "Software"), to deal in
@@ -6200,7 +6200,7 @@ Repository: https://github.com/sxzz/obug
 
 > The MIT License (MIT)
 > 
-> Copyright c 2025-PRESENT Kevin Deng (https://github.com/sxzz)
+> Copyright © 2025-PRESENT Kevin Deng (https://github.com/sxzz)
 > Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>
 > Copyright (c) 2018-2021 Josh Junon
 > 
@@ -6374,7 +6374,7 @@ Repository: https://github.com/postcss/postcss-import
 
 > The MIT License (MIT)
 > 
-> Copyright (c) 2014 Maxime Thirouin, Jason Campbell & Kevin M�rtensson
+> Copyright (c) 2014 Maxime Thirouin, Jason Campbell & Kevin Mårtensson
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy of
 > this software and associated documentation files (the "Software"), to deal in
@@ -6397,7 +6397,7 @@ Repository: https://github.com/postcss/postcss-import
 
 ## postcss-load-config
 License: MIT
-By: Michael Ciniawky, Ryan Dunckel, Mateusz Derks, Dalton Santos, Patrick Gilday, Fran�ois Wouts
+By: Michael Ciniawky, Ryan Dunckel, Mateusz Derks, Dalton Santos, Patrick Gilday, François Wouts
 Repository: https://github.com/postcss/postcss-load-config
 
 > The MIT License (MIT)
@@ -6642,12 +6642,12 @@ Repositories: https://github.com/lukeed/resolve.exports, https://github.com/luke
 
 ## shebang-command
 License: MIT
-By: Kevin M�rtensson
+By: Kevin Mårtensson
 Repository: https://github.com/kevva/shebang-command
 
 > MIT License
 > 
-> Copyright (c) Kevin M�rtensson <kevinmartensson@gmail.com> (github.com/kevva)
+> Copyright (c) Kevin Mårtensson <kevinmartensson@gmail.com> (github.com/kevva)
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 > 
@@ -6732,7 +6732,7 @@ Repository: https://github.com/antfu/strip-literal
 
 ## to-regex-range
 License: MIT
-By: Jon Schlinkert, Rouven We�ling
+By: Jon Schlinkert, Rouven Weßling
 Repository: https://github.com/micromatch/to-regex-range
 
 > The MIT License (MIT)

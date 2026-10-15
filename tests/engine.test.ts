@@ -18,7 +18,7 @@ function setup(count=3,mode:'social'|'coop'='social'){
 }
 function rejects(fn:()=>unknown,code?:string){assert.throws(fn,(err:unknown)=>err instanceof GameError&&(!code||err.code===code));}
 function publish(r:Room,id='reader'){const c=r.round!.evidence.find(e=>e.id===id)!;c.sharedBy=r.players[0].id;return c;}
-test('3-8 players receive exactly one traitor; first case has a unique provable solution',()=>{
+test('3–8 players receive exactly one traitor; first case has a unique provable solution',()=>{
  for(let n=3;n<=8;n++)for(let k=0;k<35;k++){const f=setup(n);f.start();const t=f.r.round!;assert.equal(Object.values(t.roles).filter(r=>r==='traitor').length,1);const a=t.evidence.find(c=>c.id==='footage')!.candidates!,b=t.evidence.find(c=>c.id==='reader')!.candidates!;assert.deepEqual(a.filter(x=>b.includes(x)),[t.culprit]);assert.ok(a.length>1&&b.length>1);for(const p of f.r.players)assert.ok(t.evidence.filter(c=>c.grantedTo===p.id).length<6);}
 });
 test('cooperative mode assigns both humans loyal roles and an NPC culprit',()=>{const f=setup(2,'coop');f.start();assert.deepEqual(Object.values(f.r.round!.roles),['agent','agent']);assert.ok(f.r.round!.culprit.startsWith('npc-'));});

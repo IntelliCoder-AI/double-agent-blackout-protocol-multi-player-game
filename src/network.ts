@@ -14,7 +14,7 @@ function useWebSocketMission(){
     socket.onmessage=e=>{const m=JSON.parse(e.data);if(m.type==='snapshot')setSnapshot(m);else if(m.type==='ack'||m.type==='error'){const p=pending.current.get(m.id);if(p){clearTimeout(p.timer);pending.current.delete(m.id);m.type==='ack'?p.resolve():p.reject(Error(m.message));}if(m.type==='error'&&m.code!=='WRONG_PHASE'){setError(m.message);}}};
     socket.onclose=e=>{setStatus('offline');if(e.code===4001){setError('This guest session is open in another tab. Use a different browser profile for a second player.');return;}if(!cancelled){retry=setTimeout(connect,delay+Math.random()*250);delay=Math.min(10000,delay*2);}};
     socket.onerror=()=>socket?.close();
-   }catch(e){setStatus('offline');setError(e instanceof TypeError?'Secure connection unavailable. Retrying.':e instanceof Error?e.message:'Connection failed.');if(!cancelled){retry=setTimeout(connect,delay);delay=Math.min(10000,delay*2);}}}
+   }catch(e){setStatus('offline');setError(e instanceof TypeError?'Secure connection unavailable. Retrying…':e instanceof Error?e.message:'Connection failed.');if(!cancelled){retry=setTimeout(connect,delay);delay=Math.min(10000,delay*2);}}}
    void connect();return()=>{cancelled=true;clearTimeout(retry);socket?.close();for(const p of pending.current.values()){clearTimeout(p.timer);p.reject(Error('Connection closed.'));}pending.current.clear();};
  },[]);
  const send=(type:string,payload:Record<string,unknown>={})=>new Promise<void>((resolve,reject)=>{

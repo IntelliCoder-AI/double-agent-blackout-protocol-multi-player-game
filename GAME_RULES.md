@@ -1,4 +1,4 @@
-# Case 01 - The Ninety-Second Ghost
+# Case 01 — The Ninety-Second Ghost
 
 These are the implemented B1 rules. Balance is provisional until human multiplayer playtests are completed.
 
@@ -46,7 +46,7 @@ Each shared repair advances through three server-checked steps, with a minimum 0
 
 ## Sabotage and counterplay
 
-Social mode has one traitor for all supported 3-8-player rosters. The traitor has 4 charges for 3-5 players and 5 for 6-8. Every committed sabotage starts a 35-second shared cooldown. Moving away cancels the interaction; failed/cancelled actions do not spend charges.
+Social mode has one traitor for all supported 3–8-player rosters. The traitor has 4 charges for 3–5 players and 5 for 6–8. Every committed sabotage starts a 35-second shared cooldown. Moving away cancels the interaction; failed/cancelled actions do not spend charges.
 
 | Ability | Cost / limit | Counterplay |
 | --- | --- | --- |
