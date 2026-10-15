@@ -1,0 +1,45 @@
+{
+  "name": "double-agent-blackout-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "node --import tsx server/index.ts",
+    "build": "tsc --noEmit && vite build && esbuild server/index.ts server/migrate.ts server/migrate-hosted.ts --bundle --platform=node --format=esm --packages=external --outdir=dist-server",
+    "start": "node dist-server/index.js",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "test:network": "node --import tsx --test tests/network/*.test.ts",
+    "migrate": "node dist-server/migrate.js",
+    "migrate:hosted": "node dist-server/migrate-hosted.js"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1",
+    "@react-three/fiber": "9.6.1",
+    "lucide-react": "0.468.0",
+    "pg": "8.22.0",
+    "ws": "8.22.0",
+    "zod": "4.6.7",
+    "@electric-sql/pglite": "0.3.16"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/node": "22.20.5",
+    "@types/pg": "8.11.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.185.1",
+    "@types/ws": "8.5.13",
+    "@vitejs/plugin-react": "5.2.0",
+    "esbuild": "0.28.2",
+    "tsx": "4.22.4",
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}

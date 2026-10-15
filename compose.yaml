@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: double_agent
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a strong DB_PASSWORD}
+    volumes:
+      - mission_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis -d double_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  migrate:
+    build: .
+    command: ["node", "dist-server/migrate.js"]
+    environment:
+      DATABASE_URL: postgresql://aegis:${DB_PASSWORD}@db:5432/double_agent
+    depends_on:
+      db:
+        condition: service_healthy
+  game:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://aegis:${DB_PASSWORD}@db:5432/double_agent
+      APP_ORIGIN: ${APP_ORIGIN:?Set the exact public HTTPS origin}
+      NODE_ENV: production
+      PORT: 3000
+      MAX_ACTIVE_ROOMS: 5
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    stop_grace_period: 15s
+volumes:
+  mission_data:

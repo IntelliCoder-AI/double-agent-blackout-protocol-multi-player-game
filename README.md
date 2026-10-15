@@ -4,7 +4,7 @@ Milestone B1 development source - October 15, 2026.
 
 A browser-native multiplayer investigation game built with React, Three.js / React Three Fiber, an authoritative Node WebSocket server, and PostgreSQL. One implemented mystery: **The Ninety-Second Ghost**. Supports two-player cooperative play against an NPC and a 3-8-player mode with one hidden human traitor.
 
-**Status:** the production bundle and automated rules/database tests have passed. The local 3D landing scene was rendered at desktop and mobile sizes. Live multiplayer browser tests and deployment remain unverified because the execution environment denies local network access. This is an implementation checkpoint, not a completed public release.
+**Status:** the production bundle and 23 automated rules/database tests have passed. The local 3D landing scene was rendered at desktop and mobile sizes. A Vercel/Neon hosting adapter is implemented and tested at the shared-database boundary. Public multiplayer verification is still pending. This is an implementation checkpoint, not a completed public release.
 
 ## Run locally
 
@@ -55,6 +55,21 @@ npm run test:browser
 Set `TEST_URL` to test an existing HTTPS deployment. The suite creates independent desktop contexts and an emulated touch/mobile context. Emulation is **not** a substitute for real phones or human balance testing. The browser suite currently covers room creation/join, roles, chat and reconnection; it does not yet automate the entire investigation/voting path.
 
 ## Production deployment
+
+### Vercel + Neon (early hosted build)
+
+The Vercel adapter uses real HTTPS snapshot synchronization, with a single PostgreSQL row lock serializing authoritative game mutations across function instances. Roles, clues, ballots, guest tokens, rate limits, controller leases and command receipts stay server-side. The browser receives only its filtered snapshot. No in-memory function affinity is required. The existing dedicated-server WebSocket transport remains available below.
+
+1. Create a dedicated Neon database and run `npm run build`, then `npm run migrate:hosted` with its server-only `DATABASE_URL` supplied securely.
+2. Import this repository into Vercel. `vercel.json` supplies the Vite build, Singapore function region and API routes.
+3. Set production environment variables: `DATABASE_URL` (encrypted), `APP_ORIGIN` (exact public HTTPS origin), `VITE_TRANSPORT=https`, and `MAX_ACTIVE_ROOMS=5`. Never prefix database credentials with `VITE_`.
+4. Deploy and verify `/health/ready`, then test room creation and joining in independent browser profiles before releasing the URL. Public judging requires deployment login protection to be disabled for this game project.
+
+The HTTPS client coalesces movement updates and polls while connected, approximately 5-10 updates/second depending on request latency. This is an early deployment transport; actual Internet latency, frame pacing, mobile performance and quota consumption must be measured before calling it release-ready. Database transactions serialize a maximum of five rooms. It is not a high-concurrency architecture. Free-tier quota exhaustion may stop play; no paid upgrade is automatic.
+
+Guest cookies are Secure/HttpOnly/SameSite=Strict. Connection ownership is tracked in the database; a second tab using the same cookie replaces the first. Missing polls expire presence after 15 seconds; existing host-migration and round-quorum rules then apply. Function restarts preserve stored rounds. Timers advance using database time when requests arrive, and movement catch-up is bounded. Idle rooms do not consume a continuously running timer.
+
+### Dedicated Node + PostgreSQL
 
 The supplied Dockerfile is a deployment configuration; a container build has not been executed in this restricted environment.
 
