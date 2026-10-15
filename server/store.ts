@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { Room } from './engine';
+import type { Room } from './engine.js';
 import { PGlite } from '@electric-sql/pglite';
 export class Store {
   pool:pg.Pool; embedded:PGlite|null=null; owner:pg.PoolClient|null=null;

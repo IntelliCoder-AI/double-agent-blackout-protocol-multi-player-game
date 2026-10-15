@@ -4,9 +4,9 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { z } from 'zod';
-import { Engine, GameError } from './engine';
-import { Store } from './store';
-import type { Command } from '../shared/types';
+import { Engine, GameError } from './engine.js';
+import { Store } from './store.js';
+import type { Command } from '../shared/types.js';
 
 export async function startServer(options:{port?:number;origin?:string;databaseUrl?:string;production?:boolean;engine?:Engine;frontend?:boolean}={}){
  const production=options.production??process.env.NODE_ENV==='production';const port=options.port??Number(process.env.PORT??3000);

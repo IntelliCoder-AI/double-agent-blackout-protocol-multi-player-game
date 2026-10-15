@@ -1,4 +1,4 @@
-import type { Point } from './world';
+import type { Point } from './world.js';
 export type Phase='lobby'|'reveal'|'investigation'|'discussion'|'vote'|'runoff'|'results';
 export type Mode='social'|'coop';
 export type Role='agent'|'traitor';

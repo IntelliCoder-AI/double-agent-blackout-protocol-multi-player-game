@@ -1,8 +1,8 @@
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { COLORS, STATIONS, distance, move, roomAt, type Point } from '../shared/world';
-import type { ClueView, Command, LinkView, Mode, Phase, ResultView, Role, Snapshot } from '../shared/types';
-import { clueView, makeCase, type Evidence } from './case';
+import { COLORS, STATIONS, distance, move, roomAt, type Point } from '../shared/world.js';
+import type { ClueView, Command, LinkView, Mode, Phase, ResultView, Role, Snapshot } from '../shared/types.js';
+import { clueView, makeCase, type Evidence } from './case.js';
 
 export class GameError extends Error { constructor(public code:string, message:string){super(message);} }
 function need(condition:unknown,message:string,code='INVALID_ACTION'):asserts condition {if(!condition)throw new GameError(code,message);}

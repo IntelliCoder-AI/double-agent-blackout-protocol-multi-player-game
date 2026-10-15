@@ -1,8 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
-import { Engine, GameError, type Room } from './engine';
-import type { Command } from '../shared/types';
+import { Engine, GameError, type Room } from './engine.js';
+import type { Command } from '../shared/types.js';
 
 export const hostedSchema = `CREATE SCHEMA IF NOT EXISTS game_private;
 REVOKE ALL ON SCHEMA game_private FROM PUBLIC;

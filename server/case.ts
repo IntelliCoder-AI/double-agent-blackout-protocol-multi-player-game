@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import type { ClueView } from '../shared/types';
+import type { ClueView } from '../shared/types.js';
 export interface Evidence { id:string; title:string; summary:string; kind:string; canonical:string; observed:string; candidates?:string[]; grantedTo:string; discoveredBy:string[]; sharedBy?:string; verified:boolean; forged:boolean }
 export function shuffle<T>(items:T[]) { const a=[...items]; for(let i=a.length-1;i>0;i--){const j=randomInt(i+1);[a[i],a[j]]=[a[j],a[i]];} return a; }
 export function makeCase(suspects:string[],culprit:string,players:string[]):Evidence[] {
