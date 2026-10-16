@@ -6,14 +6,14 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const log=(event,data={})=>console.log(JSON.stringify({at:new Date().toISOString(),event,...data}));
 async function until(fn,label,ms=15000){const end=Date.now()+ms;while(Date.now()<end){if(await fn())return;await sleep(250);}throw Error('Timeout: '+label);}
 (async()=>{
- const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined});
+ const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader'],executablePath:process.env.CHROME_EXECUTABLE||undefined});
  const clients=[];const errors=[];const latencies=[];
  try{
   for(const name of ['Smoke Cipher','Smoke Echo']){
    const context=await browser.newContext({viewport:{width:1440,height:900}});const page=await context.newPage();page.setDefaultTimeout(12000);
    const c={name,context,page,snap:null};clients.push(c);
    page.on('pageerror',e=>errors.push(e.message));page.on('response',async r=>{if(r.url().endsWith('/api/sync'))try{const d=await r.json();if(d.snapshot)c.snap=d.snapshot;const t=r.request().timing().responseEnd;if(t>0)latencies.push(t);}catch{}});
-   await page.goto(origin);await page.getByText('SECURE LINK',{exact:true}).waitFor();
+   await context.addInitScript(()=>{localStorage.setItem('aegis-quality','low');localStorage.setItem('aegis-audio','off');});await page.goto(origin);await page.getByText('SECURE LINK',{exact:true}).waitFor({timeout:45000});
   }
   const [a,b]=clients;await a.page.getByRole('button',{name:'Create mission',exact:true}).click();await a.page.getByLabel('Operative callsign').fill(a.name);await a.page.getByRole('button',{name:'Create secure room'}).click();await until(()=>a.snap?.room,'created');const code=a.snap.room.code;
   await b.page.getByRole('button',{name:'Join with code',exact:true}).click();await b.page.getByPlaceholder('Your callsign').fill(b.name);await b.page.getByPlaceholder('AEGIS7').fill(code);await b.page.getByRole('button',{name:'Join mission',exact:true}).click();await until(()=>b.snap?.room?.players.length===2,'joined');log('create-join',{code});
