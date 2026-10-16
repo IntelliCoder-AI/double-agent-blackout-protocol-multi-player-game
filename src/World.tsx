@@ -1,9 +1,10 @@
-import { Suspense, memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ROOMS, STATIONS, OBSTACLES, type Point } from '../shared/world';
 import type { PublicRoom, SelfView } from '../shared/types';
 import type { PerformanceSample } from '../shared/diagnostics';
+import { batchStatic } from './static-batch';
 
 const metal='#202e33',dark='#111d24',light='#b6f8e6';
 function FrameBudget({fps}:{fps:number}){
@@ -107,7 +108,9 @@ function Avatar({p,self,reduced}:{p:{x:number;z:number;color:string;connected:bo
  return <group ref={g} position={[p.x,0,p.z]}><group ref={legs}><Box at={[-.14,.3,0]} size={[.2,.6,.24]} color="#17252f"/><Box at={[.14,.3,0]} size={[.2,.6,.24]} color="#17252f"/></group><mesh position={[0,.85,0]} castShadow><capsuleGeometry args={[.26,.38,4,8]}/><meshStandardMaterial color="#35434b" roughness={.6}/></mesh><Box at={[0,.9,.23]} size={[.25,.18,.04]} glow={p.color}/><mesh position={[0,1.4,0]} castShadow><sphereGeometry args={[.23,12,8]}/><meshStandardMaterial color="#738783" metalness={.8} roughness={.25}/></mesh><Box at={[0,1.42,.18]} size={[.34,.09,.08]} glow={p.color}/><mesh position={[0,.025,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.38,.41,32]}/><meshBasicMaterial color={p.color} transparent opacity={self?1:.4}/></mesh></group>;
 }
 function Camera({player,menu,reduced}:{player?:Point;menu:boolean;reduced:boolean}){const {camera}=useThree();const target=useRef(new THREE.Vector3());useFrame(({clock},dt)=>{const p=menu?{x:3,z:0}:player??{x:0,z:0};const d=menu?27:18;const pos=new THREE.Vector3(p.x+d+(menu&&!reduced?Math.sin(clock.elapsedTime*.045)*2:0),menu?29:23,p.z+d);camera.position.lerp(pos,Math.min(1,dt*(menu?.8:3)));target.current.lerp(new THREE.Vector3(p.x,0,p.z),Math.min(1,dt*3));camera.lookAt(target.current);});return null;}
-const StaticFloor=memo(Floor),StaticFurniture=memo(Furniture);
+function StaticBatch({children}:{children:ReactNode}){const group=useRef<THREE.Group>(null!);useLayoutEffect(()=>{const batch=batchStatic(group.current);return()=>batch.dispose();},[]);return <group ref={group}>{children}</group>;}
+const StaticFloor=memo(function StaticFloor({onMove}:{onMove:(p:Point)=>void}){return <StaticBatch><Floor onMove={onMove}/></StaticBatch>;});
+const StaticFurniture=memo(function StaticFurniture(){return <StaticBatch><Furniture/></StaticBatch>;});
 export function World({room,self,onStation,onMove,selected,quality,reduced,onReady,measuring=false,onPerformance=()=>{}}:{room:PublicRoom|null;self:SelfView|null;onStation:(id:string)=>void;onMove:(p:Point)=>void;selected:string|null;quality:string;reduced:boolean;onReady:()=>void;measuring?:boolean;onPerformance?:(sample:PerformanceSample)=>void}){
  const low=quality==='low';const player=room?.players.find(p=>p.id===self?.id);const menu=!room||room.phase==='lobby';
  const moveHandler=useRef(onMove);moveHandler.current=onMove;const moveTo=useCallback((p:Point)=>moveHandler.current(p),[]);
