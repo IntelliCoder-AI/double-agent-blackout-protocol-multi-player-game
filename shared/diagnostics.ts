@@ -1,0 +1,1 @@
+export interface PerformanceSample {frames:number;seconds:number;averageFps:number;p95FrameMs:number;drawCalls:number;triangles:number;textures:number;geometries:number;quality:string;viewport:string;userAgent:string}
