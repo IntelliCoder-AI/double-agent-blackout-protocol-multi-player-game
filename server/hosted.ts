@@ -18,13 +18,14 @@ export const requestSchema=z.object({controller:z.uuid(),claim:z.boolean().optio
 type RequestData=z.infer<typeof requestSchema>;
 export class HostedGame {
  constructor(private pool:Pool,private makeEngine=()=>new Engine(undefined,1000)){}
- private async transaction<T>(fn:(c:PoolClient,w:World,e:Engine,now:number)=>Promise<T>):Promise<T>{
+ private async transaction<T>(fn:(c:PoolClient,w:World,e:Engine,now:number)=>Promise<T>,fallback?:(c:PoolClient,w:World,e:Engine,now:number)=>Promise<T>):Promise<T>{
   const c=await this.pool.connect();try{await c.query('BEGIN');
-   const row=await c.query('SELECT state FROM game_private.hosted_world WHERE id=1 FOR UPDATE');
+   let row=await c.query('SELECT state FROM game_private.hosted_world WHERE id=1 FOR UPDATE'+(fallback?' SKIP LOCKED':''));const skipped=!row.rows[0]&&!!fallback;if(skipped)row=await c.query('SELECT state FROM game_private.hosted_world WHERE id=1');
    if(!row.rows[0])throw Error('Hosted schema has not been migrated.');
    const w=row.rows[0].state as World;const e=this.makeEngine();e.rooms=new Map(w.rooms.map(r=>[r.code,r]));
    // Database time is authoritative across all function instances.
    const clock=await c.query('SELECT floor(extract(epoch FROM clock_timestamp())*1000)::float8 AS now');const now=Number(clock.rows[0].now);
+   if(skipped){const result=await fallback!(c,w,e,now);await c.query('COMMIT');return result;}
    const result=await fn(c,w,e,now);w.rooms=[...e.rooms.values()];
    for(const [key,b]of Object.entries(w.buckets))if(now-b.at>600000)delete w.buckets[key];
    for(const [key,l]of Object.entries(w.leases))if(now-l.seen>1800000)delete w.leases[key];
@@ -45,7 +46,7 @@ export class HostedGame {
   while(w.tick+50<=end){w.tick+=50;e.tick(w.tick,.05);}
   if(now-w.tick>500){e.tick(now,0);w.tick=now;}
  }
- async sync(token:string|undefined,data:RequestData){return this.transaction(async(c,w,e,now)=>{
+ async sync(token:string|undefined,data:RequestData){return this.transaction<unknown>(async(c,w,e,now)=>{
   if(!token||token.length!==43)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');
   const session=(await c.query('SELECT id FROM game_private.hosted_sessions WHERE token_hash=$1 AND expires_at>now()',[hash(token)])).rows[0];
   if(!session)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');const sid:string=session.id;
@@ -68,5 +69,16 @@ export class HostedGame {
    }
   }catch(err){if(!(err instanceof GameError))throw err;response={type:'error',id:cmd.id,code:err.code,message:err.message};}}
   return {snapshot:e.snapshot(sid,now),response};
- });}
+ },!data.claim&&(!data.command||data.command.type==='input.move')?async(c,w,e,now)=>{
+  // Transient snapshots/input packets must not queue behind a world writer.
+  // Privileged commands and controller claims always take the authoritative lock.
+  if(!token||token.length!==43)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');
+  const identity=(await c.query('SELECT id FROM game_private.hosted_sessions WHERE token_hash=$1 AND expires_at>now()',[hash(token)])).rows[0];
+  if(!identity)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');
+  const sid:string=identity.id,lease=w.leases[sid];
+  if(!lease||lease.controller!==data.controller)return {type:'error',code:'SESSION_REPLACED',message:'This guest session is open in another tab. Use another browser profile for a second player.'};
+  let response:unknown=null;
+  if(data.command){try{e.command(sid,data.command as Command,now);response={type:'ack',id:data.command.id,coalesced:true};}catch(err){if(!(err instanceof GameError))throw err;response={type:'error',id:data.command.id,code:err.code,message:err.message};}}
+  return {snapshot:e.snapshot(sid,now),response};
+ }:undefined);}
 }
