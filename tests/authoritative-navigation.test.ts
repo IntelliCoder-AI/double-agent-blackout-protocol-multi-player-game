@@ -13,7 +13,7 @@ test('server routes reach every console without streamed steering or position ju
   const station=STATIONS.find(s=>s.id===id)!;const destination={x:station.x,z:station.z+(id==='board'?0:.8)};
   command(0,'move.to',destination);let ticks=0;
   while(player.route?.length&&ticks++<800){const before={x:player.x,z:player.z};now+=50;engine.tick(now,.05);assert.ok(walkable(player));assert.ok(distance(before,player)<=.26001,'authoritative speed limit');}
-  assert.ok(ticks<800,'route stalled at '+id);assert.ok(distance(player,destination)<.08,'precise endpoint '+id);assert.ok(distance(player,station)<2.65,'interaction range '+id);
+  assert.ok(ticks<800,'route stalled at '+id);if(walkable(destination))assert.ok(distance(player,destination)<.08,'precise endpoint '+id);assert.ok(distance(player,station)<2.65,'interaction range '+id);
  }
  command(0,'move.to',{x:0,z:-3});command(0,'input.move',{x:1,z:0});assert.equal(player.route?.length,0,'direct input overrides a route');
  command(0,'move.to',{x:0,z:-3});command(0,'move.cancel');assert.equal(player.route?.length,0);assert.equal(player.dx,0);

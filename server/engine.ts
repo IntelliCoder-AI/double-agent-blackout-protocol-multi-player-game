@@ -86,7 +86,7 @@ export class Engine {
     }else{
       const t=r.round;need(t,'The mission has not started.');need(c.roundId===t.id,'This action belongs to an old mission.','STALE_ROUND');
       if(c.type==='input.move'){need(t.phase==='investigation'&&!t.pauseAt,'Movement is paused.','WRONG_PHASE');if(a.x||a.z)p.route=[];p.dx=a.x;p.dz=a.z;p.inputAt=now;return r;}
-      if(c.type==='move.to'||c.type==='move.cancel'){this.live(r,p,now);if(c.type==='move.cancel'){p.route=[];p.dx=0;p.dz=0;}else{need(walkable(a),'Choose a destination on the facility floor.','INVALID_DESTINATION');const route=pathTo(p,a);need(route.length,'No clear route reaches that destination.','INVALID_DESTINATION');p.route=route;p.dx=0;p.dz=0;delete t.channels[p.id];}return r;}
+      if(c.type==='move.to'||c.type==='move.cancel'){this.live(r,p,now);if(c.type==='move.cancel'){p.route=[];p.dx=0;p.dz=0;}else{need(walkable(a)||STATIONS.some(s=>distance(s,a)<=1.1),'Choose a destination on the facility floor.','INVALID_DESTINATION');const route=pathTo(p,a);need(route.length,'No clear route reaches that destination.','INVALID_DESTINATION');p.route=route;p.dx=0;p.dz=0;delete t.channels[p.id];}return r;}
       if(c.type==='vote'){
         need(['vote','runoff'].includes(t.phase)&&now<t.deadline,'Voting is closed.');const ids=r.mode==='coop'?['npc-mira','npc-orin','npc-tessa']:r.players.map(p=>p.id);
         if(a.target!==null){need(ids.includes(a.target),'Invalid suspect.');if(t.phase==='runoff')need(t.runoffTargets.includes(a.target),'Choose a runoff candidate.');need(t.evidence.some(e=>e.id===a.evidence&&e.sharedBy),'Attach a published record from the Evidence Wall.');}
