@@ -5,6 +5,11 @@ on:
     paths:
       - '.github/workflows/live-verification.yml'
       - 'tests/live/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-verification.yml'
+      - 'tests/live/**'
   workflow_dispatch:
 permissions:
   contents: read
