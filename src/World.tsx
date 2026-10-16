@@ -9,7 +9,7 @@ import { batchStatic } from './static-batch';
 const metal='#202e33',dark='#111d24',light='#b6f8e6';
 function FrameBudget({fps}:{fps:number}){
  const invalidate=useThree(s=>s.invalidate);
- useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')invalidate();},1000/fps);return()=>clearInterval(timer);},[fps,invalidate]);
+ useEffect(()=>{let last=0;const timer=setInterval(()=>{const now=performance.now(),interval=document.hasFocus()?1000/fps:500;if(document.visibilityState==='visible'&&now-last>=interval){last=now;invalidate();}},1000/fps);return()=>clearInterval(timer);},[fps,invalidate]);
  return null;
 }
 function PerformanceProbe({measuring,quality,onSample}:{measuring:boolean;quality:string;onSample:(sample:PerformanceSample)=>void}){
@@ -111,11 +111,11 @@ function Camera({player,menu,reduced}:{player?:Point;menu:boolean;reduced:boolea
 function StaticBatch({children}:{children:ReactNode}){const group=useRef<THREE.Group>(null!);useLayoutEffect(()=>{const batch=batchStatic(group.current);return()=>batch.dispose();},[]);return <group ref={group}>{children}</group>;}
 const StaticFloor=memo(function StaticFloor({onMove}:{onMove:(p:Point)=>void}){return <StaticBatch><Floor onMove={onMove}/></StaticBatch>;});
 const StaticFurniture=memo(function StaticFurniture(){return <StaticBatch><Furniture/></StaticBatch>;});
-export function World({room,self,onStation,onMove,selected,quality,reduced,onReady,measuring=false,onPerformance=()=>{}}:{room:PublicRoom|null;self:SelfView|null;onStation:(id:string)=>void;onMove:(p:Point)=>void;selected:string|null;quality:string;reduced:boolean;onReady:()=>void;measuring?:boolean;onPerformance?:(sample:PerformanceSample)=>void}){
+export function World({room,self,onStation,onMove,selected,quality,reduced,obscured=false,onReady,measuring=false,onPerformance=()=>{}}:{room:PublicRoom|null;self:SelfView|null;onStation:(id:string)=>void;onMove:(p:Point)=>void;selected:string|null;quality:string;reduced:boolean;obscured?:boolean;onReady:()=>void;measuring?:boolean;onPerformance?:(sample:PerformanceSample)=>void}){
  const low=quality==='low';const player=room?.players.find(p=>p.id===self?.id);const menu=!room||room.phase==='lobby';
  const moveHandler=useRef(onMove);moveHandler.current=onMove;const moveTo=useCallback((p:Point)=>moveHandler.current(p),[]);
  return <Canvas frameloop={low?'demand':'always'} shadows={low?false:'percentage'} dpr={low?.75:[1,1.5]} camera={{position:[28,30,33],fov:43,near:.1,far:160}} gl={{antialias:!low,powerPreference:low?'low-power':'high-performance'}} onCreated={()=>onReady()} fallback={<div className="webgl-error">This device could not initialize 3D graphics. Enable hardware acceleration and reload.</div>}>
-  {low&&<FrameBudget fps={menu?15:30}/>}
+  {low&&<FrameBudget fps={obscured?3:menu?15:30}/>}
   <color attach="background" args={['#081215']}/><fog attach="fog" args={['#081215',40,100]}/><Environment/>
   <ambientLight intensity={.6}/><hemisphereLight args={['#bcf8e4','#1d3044',1.4]}/><directionalLight position={[5,25,8]} intensity={2.5} color="#b9e8d5" castShadow={!low} shadow-mapSize={[1024,1024]} shadow-camera-left={-24} shadow-camera-right={24} shadow-camera-top={24} shadow-camera-bottom={-24} shadow-bias={-.001}/>
   <directionalLight position={[-20,6,-15]} intensity={1.5} color="#6ca3b2"/>
