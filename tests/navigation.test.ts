@@ -22,3 +22,10 @@ test('hosted steering traverses corridor corners between consoles with delayed u
   }
  }
 });
+
+test('click-to-walk finishes at the Evidence Wall rather than one grid cell short',()=>{
+ const destination={x:0,z:-3};
+ for(const start of [{x:-4,z:-2.2},{x:15,z:-7.2},{x:-3,z:3.5}]){
+  const route=pathTo(start,destination);assert.ok(route.length);assert.deepEqual(route[route.length-1],destination);
+ }
+});
