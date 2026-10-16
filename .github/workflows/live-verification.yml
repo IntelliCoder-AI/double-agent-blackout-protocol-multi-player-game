@@ -45,6 +45,9 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Public API readiness
+        run: |
+          node -e "fetch(process.env.BASE_URL+'/health/ready').then(async r=>{const v=await r.json();console.log(JSON.stringify({event:'public-health',status:r.status,...v}));if(!r.ok||v.version!=='b2-five-cases')process.exitCode=1;})"
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Live social security and reconnect

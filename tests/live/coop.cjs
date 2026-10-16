@@ -12,7 +12,7 @@ async function until(fn,label,ms=15000){const end=Date.now()+ms;while(Date.now()
   for(const name of ['Smoke Cipher','Smoke Echo']){
    const context=await browser.newContext({viewport:{width:1440,height:900}});const page=await context.newPage();page.setDefaultTimeout(12000);
    const c={name,context,page,snap:null};clients.push(c);
-   page.on('pageerror',e=>errors.push(e.message));page.on('response',async r=>{if(r.url().endsWith('/api/sync'))try{const d=await r.json();if(d.snapshot)c.snap=d.snapshot;const t=r.request().timing().responseEnd;if(t>0)latencies.push(t);}catch{}});
+   page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>{if(r.url().includes('/api/'))log('api-request-failed',{path:new URL(r.url()).pathname,error:r.failure()?.errorText});});page.on('response',r=>{if(r.url().endsWith('/api/session')||r.status()>=400)log('api-response',{path:new URL(r.url()).pathname,status:r.status()});});page.on('response',async r=>{if(r.url().endsWith('/api/sync'))try{const d=await r.json();if(d.snapshot)c.snap=d.snapshot;const t=r.request().timing().responseEnd;if(t>0)latencies.push(t);}catch{}});
    await context.addInitScript(()=>{localStorage.setItem('aegis-quality','low');localStorage.setItem('aegis-audio','off');});await page.goto(origin);await page.getByText('SECURE LINK',{exact:true}).waitFor({timeout:45000});
   }
   const [a,b]=clients;await a.page.getByRole('button',{name:'Create mission',exact:true}).click();await a.page.getByLabel('Operative callsign').fill(a.name);await a.page.getByRole('button',{name:'Create secure room'}).click();await until(()=>a.snap?.room,'created');const code=a.snap.room.code;

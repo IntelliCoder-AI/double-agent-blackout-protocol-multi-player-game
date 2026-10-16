@@ -69,9 +69,9 @@ export class HostedGame {
    }
   }catch(err){if(!(err instanceof GameError))throw err;response={type:'error',id:cmd.id,code:err.code,message:err.message};}}
   return {snapshot:e.snapshot(sid,now),response};
- },!data.claim&&(!data.command||data.command.type==='input.move')?async(c,w,e,now)=>{
+ },!data.claim&&(!data.command||(data.command.type==='input.move'&&!!(data.command.payload?.x||data.command.payload?.z)))?async(c,w,e,now)=>{
   // Transient snapshots/input packets must not queue behind a world writer.
-  // Privileged commands and controller claims always take the authoritative lock.
+  // Privileged commands, stop packets and controller claims always take the authoritative lock.
   if(!token||token.length!==43)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');
   const identity=(await c.query('SELECT id FROM game_private.hosted_sessions WHERE token_hash=$1 AND expires_at>now()',[hash(token)])).rows[0];
   if(!identity)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');

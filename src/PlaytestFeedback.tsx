@@ -1,0 +1,9 @@
+import {useState} from 'react';
+import type {PublicRoom} from '../shared/types';
+import {downloadReport,roundReport} from './reports';
+export function PlaytestFeedback({room}:{room:PublicRoom}){
+ const [answers,setAnswers]=useState({understood:'',fairness:'',enjoyment:'',notes:''});
+ const complete=!!answers.understood&&!!answers.fairness&&!!answers.enjoyment;
+ const rating=(key:'fairness'|'enjoyment',label:string)=><label>{label}<select value={answers[key]} onChange={e=>setAnswers(old=>({...old,[key]:e.target.value}))}><option value="">Choose a rating</option>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n}{n===1?' / low':n===5?' / high':''}</option>)}</select></label>;
+ return <div className="playtest-feedback"><button className="secondary full" onClick={()=>downloadReport('aegis-round-'+room.roundNumber+'.json',roundReport(room))}>Export playtest report</button><details><summary>Rate this mission</summary><p>Help tune future missions. Your answers download with the round report on this device.</p><label>Did you understand what to do within 90 seconds?<select value={answers.understood} onChange={e=>setAnswers(old=>({...old,understood:e.target.value}))}><option value="">Choose an answer</option><option value="yes">Yes</option><option value="no">No</option></select></label>{rating('fairness','How fair did the mission feel?')}{rating('enjoyment','How much did you enjoy this mission?')}<label>What should improve?<textarea maxLength={400} value={answers.notes} onChange={e=>setAnswers(old=>({...old,notes:e.target.value}))}/></label><button className="secondary full" disabled={!complete} onClick={()=>downloadReport('aegis-feedback-'+room.roundNumber+'.json',{...roundReport(room),observations:{understoodWithin90Seconds:answers.understood==='yes',fairness1to5:Number(answers.fairness),enjoyment1to5:Number(answers.enjoyment),notes:answers.notes}})}>Save feedback with round report</button></details></div>;
+}
