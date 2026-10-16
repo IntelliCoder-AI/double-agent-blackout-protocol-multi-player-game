@@ -36,7 +36,7 @@ export interface Room {code:string;mode:Mode;hostId:string;players:Player[];roun
 export const defaultTiming={reveal:8000,investigation:270000,discussion:45000,vote:30000,runoff:15000,scan:2500,verify:6000,escrow:120000,exfilStart:90000,exfil:40000};
 export class Engine {
   rooms=new Map<string,Room>(); inputs=new Map<string,number>();
-  constructor(public timing={...defaultTiming}){}
+  constructor(public timing={...defaultTiming},public inputWindow=250){}
   locate(session:string){return [...this.rooms.values()].find(r=>r.players.some(p=>p.session===session));}
   member(r:Room,session:string){const p=r.players.find(p=>p.session===session);need(p,'Join a mission first.','NOT_MEMBER');return p;}
   connected(session:string,online:boolean,now=Date.now()) {const r=this.locate(session);if(!r)return;const p=this.member(r,session);p.connected=online;p.lastSeen=now;p.dx=0;p.dz=0;r.updatedAt=now;}
@@ -133,7 +133,7 @@ export class Engine {
       }
       if(t.pauseAt!==null){const pause=now-t.pauseAt;t.pauseSpent+=pause;t.deadline+=pause;t.investigationAt+=pause;for(const c of Object.values(t.channels))c.endsAt+=pause;if(t.exfil)t.exfil.endsAt+=pause;t.pauseAt=null;dirty=true;}
       if(t.phase==='investigation'){
-        for(const p of r.players){if(!p.connected||now-p.inputAt>250){p.dx=0;p.dz=0;}const q=move(p,p.dx,p.dz,dt);p.x=q.x;p.z=q.z;
+        for(const p of r.players){if(!p.connected||now-p.inputAt>this.inputWindow){p.dx=0;p.dz=0;}const q=move(p,p.dx,p.dz,dt);p.x=q.x;p.z=q.z;
           const c=t.channels[p.id];if(c){const station=STATIONS.find(s=>s.id===c.station)!;if(!p.connected||distance(p,station)>2.65){delete t.channels[p.id];dirty=true;continue;}if(now>=c.endsAt){delete t.channels[p.id];dirty=true;this.completeChannel(r,p,c,now);}}
         }
         if(r.mode==='coop'&&this.elapsed(t,now)>=t.npcNext){

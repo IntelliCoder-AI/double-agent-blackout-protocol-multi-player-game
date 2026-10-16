@@ -17,7 +17,7 @@ const commandSchema=z.object({id:z.uuid(),type:z.string().max(40),roundId:z.stri
 export const requestSchema=z.object({controller:z.uuid(),claim:z.boolean().optional(),command:commandSchema.optional()}).strict();
 type RequestData=z.infer<typeof requestSchema>;
 export class HostedGame {
- constructor(private pool:Pool,private makeEngine=()=>new Engine()){}
+ constructor(private pool:Pool,private makeEngine=()=>new Engine(undefined,1000)){}
  private async transaction<T>(fn:(c:PoolClient,w:World,e:Engine,now:number)=>Promise<T>):Promise<T>{
   const c=await this.pool.connect();try{await c.query('BEGIN');
    const row=await c.query('SELECT state FROM game_private.hosted_world WHERE id=1 FOR UPDATE');
