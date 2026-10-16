@@ -1,0 +1,37 @@
+name: Public multiplayer verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-verification.yml'
+      - 'tests/live/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-multiplayer-verification
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BASE_URL: https://double-agent-blackout-protocol-radhe12.vercel.app
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Rules and persistence
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Live social security and reconnect
+        run: node tests/live/security.cjs
+      - name: Complete live co-op round and rematch
+        run: node tests/live/coop.cjs
