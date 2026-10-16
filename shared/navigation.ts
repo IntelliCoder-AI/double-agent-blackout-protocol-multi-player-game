@@ -1,4 +1,4 @@
-import { walkable, type Point } from './world';
+import { walkable, type Point } from './world.js';
 export function pathTo(start:Point,end:Point):Point[]{
  const size=.6;const key=(x:number,z:number)=>`${x},${z}`;const grid=(p:Point)=>({x:Math.round(p.x/size),z:Math.round(p.z/size)});
  const a=grid(start),b=grid(end),queue=[a],previous=new Map<string,string|null>([[key(a.x,a.z),null]]);let target='';
