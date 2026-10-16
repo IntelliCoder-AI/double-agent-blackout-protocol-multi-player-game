@@ -18,6 +18,14 @@ function setup(count=3,mode:'social'|'coop'='social'){
 }
 function rejects(fn:()=>unknown,code?:string){assert.throws(fn,(err:unknown)=>err instanceof GameError&&(!code||err.code===code));}
 function publish(r:Room,id='reader'){const c=r.round!.evidence.find(e=>e.id===id)!;c.sharedBy=r.players[0].id;return c;}
+
+test('completed disconnected debriefs do not exhaust active mission capacity',()=>{
+ const f=setup(2,'coop');f.start();f.e.finish(f.r,'draw','Test debrief',f.now);
+ for(const p of f.r.players)p.connected=false;
+ for(let i=1;i<5;i++){const r=structuredClone(f.r);r.code=`OLD00${i}`;f.e.rooms.set(r.code,r);}
+ const guest=randomUUID();f.e.command(guest,{id:randomUUID(),type:'room.create',payload:{name:'New guest',mode:'coop'}},f.now);
+ assert.ok(f.e.locate(guest));assert.equal(f.e.rooms.size,6);assert.equal(f.e.locate(f.sessions[0])!.round!.phase,'results');
+});
 test('3–8 players receive exactly one traitor; first case has a unique provable solution',()=>{
  for(let n=3;n<=8;n++)for(let k=0;k<35;k++){const f=setup(n);f.start();const t=f.r.round!;assert.equal(Object.values(t.roles).filter(r=>r==='traitor').length,1);const a=t.evidence.find(c=>c.id==='footage')!.candidates!,b=t.evidence.find(c=>c.id==='reader')!.candidates!;assert.deepEqual(a.filter(x=>b.includes(x)),[t.culprit]);assert.ok(a.length>1&&b.length>1);for(const p of f.r.players)assert.ok(t.evidence.filter(c=>c.grantedTo===p.id).length<6);}
 });

@@ -51,7 +51,10 @@ export class Engine {
       need(!this.locate(session),'Leave your current mission first.');
       let r:Room;
       if(c.type==='room.create'){
-        need(this.rooms.size<Number(process.env.MAX_ACTIVE_ROOMS??5),'Headquarters is at capacity. Try again shortly.','CAPACITY');
+        // Preserve disconnected guests' debriefs for reconnect, without letting
+        // completed, empty missions occupy every playable room slot.
+        const occupied=[...this.rooms.values()].filter(room=>room.players.some(p=>p.connected)||room.round?.phase!=='results');
+        need(occupied.length<Number(process.env.MAX_ACTIVE_ROOMS??5)&&this.rooms.size<100,'Headquarters is at capacity. Try again shortly.','CAPACITY');
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';do{code=Array.from(randomBytes(6),b=>alphabet[b%32]).join('');}while(this.rooms.has(code));
         r={code,mode:a.mode,hostId:'',players:[],round:null,chat:[],roundNumber:0,createdAt:now,updatedAt:now};this.rooms.set(code,r);
       }else{const found=this.rooms.get(a.code);need(found,'Mission not found. Check the code.','NOT_FOUND');r=found;need(!r.round,'This mission is underway. Join after the rematch.','STARTED');}
