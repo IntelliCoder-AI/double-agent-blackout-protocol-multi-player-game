@@ -6,6 +6,11 @@ import type { PublicRoom, SelfView } from '../shared/types';
 import type { PerformanceSample } from '../shared/diagnostics';
 
 const metal='#202e33',dark='#111d24',light='#b6f8e6';
+function FrameBudget({fps}:{fps:number}){
+ const invalidate=useThree(s=>s.invalidate);
+ useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')invalidate();},1000/fps);return()=>clearInterval(timer);},[fps,invalidate]);
+ return null;
+}
 function PerformanceProbe({measuring,quality,onSample}:{measuring:boolean;quality:string;onSample:(sample:PerformanceSample)=>void}){
  const data=useRef({frames:[] as number[],seconds:0,maxCalls:0,maxTriangles:0});const {gl,size}=useThree();
  useEffect(()=>{data.current={frames:[],seconds:0,maxCalls:0,maxTriangles:0};},[measuring,quality]);
@@ -106,7 +111,8 @@ const StaticFloor=memo(Floor),StaticFurniture=memo(Furniture);
 export function World({room,self,onStation,onMove,selected,quality,reduced,onReady,measuring=false,onPerformance=()=>{}}:{room:PublicRoom|null;self:SelfView|null;onStation:(id:string)=>void;onMove:(p:Point)=>void;selected:string|null;quality:string;reduced:boolean;onReady:()=>void;measuring?:boolean;onPerformance?:(sample:PerformanceSample)=>void}){
  const low=quality==='low';const player=room?.players.find(p=>p.id===self?.id);const menu=!room||room.phase==='lobby';
  const moveHandler=useRef(onMove);moveHandler.current=onMove;const moveTo=useCallback((p:Point)=>moveHandler.current(p),[]);
- return <Canvas shadows={low?false:'percentage'} dpr={low?1:[1,1.5]} camera={{position:[28,30,33],fov:43,near:.1,far:160}} gl={{antialias:!low,powerPreference:'high-performance'}} onCreated={()=>onReady()} fallback={<div className="webgl-error">This device could not initialize 3D graphics. Enable hardware acceleration and reload.</div>}>
+ return <Canvas frameloop={low?'demand':'always'} shadows={low?false:'percentage'} dpr={low?.75:[1,1.5]} camera={{position:[28,30,33],fov:43,near:.1,far:160}} gl={{antialias:!low,powerPreference:low?'low-power':'high-performance'}} onCreated={()=>onReady()} fallback={<div className="webgl-error">This device could not initialize 3D graphics. Enable hardware acceleration and reload.</div>}>
+  {low&&<FrameBudget fps={menu?15:30}/>}
   <color attach="background" args={['#081215']}/><fog attach="fog" args={['#081215',40,100]}/><Environment/>
   <ambientLight intensity={.6}/><hemisphereLight args={['#bcf8e4','#1d3044',1.4]}/><directionalLight position={[5,25,8]} intensity={2.5} color="#b9e8d5" castShadow={!low} shadow-mapSize={[1024,1024]} shadow-camera-left={-24} shadow-camera-right={24} shadow-camera-top={24} shadow-camera-bottom={-24} shadow-bias={-.001}/>
   <directionalLight position={[-20,6,-15]} intensity={1.5} color="#6ca3b2"/>
