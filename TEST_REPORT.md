@@ -1,78 +1,70 @@
 # Milestone B1 verification report
 
-Recorded October 15, 2026. **B1 remains in progress; there is no public deployment yet.**
+Recorded October 16, 2026. Public development build, one mystery. This supersedes the pre-deployment October 15 checkpoint.
 
-## Hosted adapter checkpoint — October 16, 2026 (India)
+**Play:** https://double-agent-blackout-protocol-radhe12.vercel.app
 
-- Added Vercel HTTP API and HTTPS client synchronization backed by a dedicated Neon database.
-- Production TypeScript/Vite/esbuild build: passed. Full automated suite: **23 passed, 0 failed, 0 skipped**.
-- New SQL test uses two independent `HostedGame` instances sharing embedded PostgreSQL. It checks cross-instance joining, role filtering, private session filtering, command replay/mismatch, unauthorized sabotage, controller replacement and role-preserving reconnect.
-- This test interleaves requests; it does not establish production concurrent-load capacity or Internet performance.
-- Neon production schema created in dedicated project `curly-mode-17343293`; public access to the three game tables revoked explicitly.
-- Vercel project created. Credential installation and removal of login protection were blocked by automatic approval review and await explicit approval. No public playable build is claimed at this checkpoint.
-- Hosted browser tests, real-device testing, latency/throughput measurements and human balancing remain pending.
+**Hosting:** Vercel production functions with dedicated Neon PostgreSQL in Singapore. Guest cookies are HttpOnly/Secure; roles and canonical evidence remain server-side. Hosted transport uses real HTTPS polling. The dedicated Node/WebSocket implementation remains available separately.
 
-## Results actually obtained
+## Results obtained
 
-| Check | Result | Scope / evidence |
+| Check | Result | Scope |
 | --- | --- | --- |
-| TypeScript strict check | PASS | Included in the final production build, including server, client and test sources |
-| Production client and server build | PASS | Vite 7.3.7 + esbuild; server and migration entry points generated |
-| Automated rules / SQL tests | **22 passed, 0 failed, 0 skipped** | `npm test`; final run approximately 5.17 seconds |
-| Case validity across roster sizes | PASS | 35 generated rounds for each 3–8-player roster; exactly one culprit in the group intersection |
-| Mandatory clue separation | PASS | 100 distributions for each 2–8-player roster; identifying fragments never share an initial owner |
-| Role and clue projection | PASS at engine boundary | Only the requesting role/private clues appear; unpublished case data and other guest session identities are absent |
-| Rule validation | PASS at engine boundary | Unauthorized sabotage, stale rounds, remote interactions, invalid inputs, unsupported comparisons, duplicate effects and missing ballot evidence rejected |
-| Sabotage and exfiltration | PASS at engine boundary | Charges/cooldown, immutable forgery receipt, second-verifier counterplay, abort, repair lockout and upload victory |
-| Voting / reconnect / rematch | PASS at engine boundary | Correct/wrong indictment, ties, abstention, runoff, draw, quorum failure, host migration, frozen deadline, persistent score and new round |
-| SQL persistence / atomic receipts | PASS | Actual embedded PostgreSQL schema, stored sessions/rooms, duplicate-command rollback and deletion |
-| Server initialization | PASS in development | Real Node HTTP/WebSocket server reached its listening state using embedded PostgreSQL |
-| Local desktop 3D render | PASS | Headless Chromium, local-file render of the actual client, 1440×1000; canvas present; no JavaScript page errors; no horizontal overflow |
-| Local mobile-size 3D render | PASS | Same renderer at 390×844; canvas present; no JavaScript page errors; no horizontal overflow |
-| Independent desktop browser multiplayer | **BLOCKED / not passed** | Browser launched, but navigation to the local server failed with `net::ERR_NETWORK_ACCESS_DENIED` |
-| Mobile browser room flow | **BLOCKED / not passed** | Same network denial before application navigation; emulation only, not a real-device test |
-| Native PostgreSQL service connection | **BLOCKED / not tested** | OS returned permission denied for loopback TCP; SQL tests used embedded PostgreSQL instead |
-| Public HTTPS playtest | NOT RUN | No public hosting endpoint provisioned |
-| Docker/Linux clean install | NOT RUN | Docker configuration and portable lockfile supplied; a fresh hosted install/build still needs verification |
-| Human balance / enjoyment playtest | NOT RUN | No human multiplayer observations have been collected |
-| Hardware FPS / load / latency targets | NOT MEASURED | No claim of 60 FPS desktop, 30 FPS mobile, or supported concurrency |
+| Rules, privacy, sabotage, voting, recovery, SQL persistence and receipts | PASS | 25 automated tests, including delayed navigation and room-capacity regressions |
+| Production TypeScript/Vite/server build | PASS | Local build and clean Vercel build |
+| Public readiness endpoint | PASS | HTTP 200 with database readiness |
+| Two independent guests create/join, ready and receive co-op roles | PASS | Separate Chromium contexts against production |
+| Three-player social lobby and private roles | PASS | Exactly one traitor; public players contain no role/session; public room contains no roles/culprit |
+| Live invalid actions | PASS | Agent sabotage, remote scan, invalid movement and stale-round actions rejected |
+| Origin and authentication | PASS | Invalid origin 403; missing session 401 |
+| Private recovery and uplink repair | PASS | UI navigation, timed scanning and all three repair steps |
+| Host migration and reconnect | PASS | Host page closed; host migrated; returning cookie retained identity and role |
+| Mobile layout and touch movement | PASS, EMULATED | Chromium 390x844; touch changed position; no horizontal overflow |
+| Shared Evidence Wall and supported connections | PASS | Four authenticated records synchronized; both evidence-backed connections validated through UI |
+| Full co-op evidence-to-rematch run | INCOMPLETE | Live run reached discussion; test wait expired 17 seconds before ballot opening |
+| Physical devices and human balance | NOT RUN | No hardware FPS or enjoyment claims |
 
-The 22 automated tests exercise game rules directly. They are not evidence of independent browsers playing a full round over the network. The added `test:network` suite uses real HTTP and WebSocket clients and is ready for an environment where local networking is permitted; it has not been run successfully here.
+No JavaScript page errors were recorded in the completed three-player security/mobile/reconnect run. This is not a formal security audit. Live social resolution with 5-8 players, adversarial concurrency, soak tests and human traitor play remain unverified.
 
-The two attempted Playwright end-to-end tests failed at the environment's network boundary. They are recorded as blocked, not converted into passes. The offline render check uses the genuine client and procedural 3D scene without fabricated players, roles, room responses or multiplayer state. Its screenshots intentionally show an unavailable connection and must not be submitted as proof of live gameplay.
+## Defects found through live testing
 
-## Build measurements
+- Short input expiry caused poor movement over Internet polling. Hosted input now expires after one second; dedicated WebSocket input retains its shorter timeout. Speed and collision validation remain authoritative.
+- Small path segments caused overshoot and corridor stalls. Paths now retain turns and straight segments, add boundary clearance, and require closer turn arrival. A regression test simulates delayed updates across eight consoles.
+- Completed disconnected missions exhausted creation slots. Their debriefs now remain reconnectable without consuming active creation slots; retained storage has a separate bound.
+- An early browser script assumed fixed clue ownership and timed out at a correctly locked terminal. It now respects randomized grants and two-minute shared recovery.
+- The full-round test allowed 240 seconds to reach voting after evidence collection, which was 17 seconds too short for that run's remaining investigation and discussion. The wait is now 360 seconds. The rerun could not launch Chromium in the current restricted runtime (Windows exit code 3221225506); live voting/results/rematch are therefore still unverified.
 
-Final build output:
+Failed runs are not counted as passes. Live scripts use UI actions, real server clocks and public HTTP responses; they do not inject game state or teleport players.
 
-- HTML: 0.66 kB; gzip 0.42 kB.
-- CSS: 24.27 kB; gzip 6.12 kB.
-- Application JavaScript: 238.64 kB; gzip 75.52 kB.
-- Three.js / renderer JavaScript: 902.67 kB; gzip 244.31 kB.
-- Server entry: approximately 49.4 kB; migration entry: approximately 3.6 kB, excluding runtime dependencies.
+## Reproduce
 
-Vite emitted a large-chunk warning for the 3D renderer. This is retained as a performance follow-up, not suppressed. Build size is not an FPS measurement. Shadows and pixel density have a lower graphics preset; actual phone performance remains unverified.
+```sh
+npm ci
+npm test
+npm run build
+npx playwright install chromium
+node tests/live/security.cjs
+node tests/live/coop.cjs
+```
 
-## Implemented checkpoint
+Live tests create their own guests on the public URL. Set BASE_URL to a staging deployment to avoid production testing. CHROME_EXECUTABLE optionally selects a local Chromium executable. The co-op test takes a normal-duration round. Screenshots and console output document observations. Separate browser profiles/devices represent independent guests; tabs sharing cookies share one identity.
 
-Source includes a real authoritative WebSocket backend, guest sessions, private rooms/roles/clues, synchronized player positions, case distribution, server timers, shared Evidence Wall, verification and supported links, three repairs, four human sabotage actions, scripted NPC sabotage, discussion, private ballots, results/evidence audit, scores, reconnection, host migration, rematches, room expiry and persistent command receipts.
+## Performance and capacity
 
-The interface includes create/join, lobby/readiness/accent choice, role reveal, clickable 3D consoles, keyboard/click/touch movement, facility navigation, private inventory, Evidence Wall, quick messages/chat, repairs, voting, debrief, settings and briefing. The five connected facility sectors are procedural 3D geometry with lighting, holographic elements and animated reactor details. This is first-pass B1 art, not final premium environment production.
+- Application JavaScript: 238.82 kB / 75.61 kB gzip.
+- Three.js renderer: 902.67 kB / 244.31 kB gzip. The large-chunk warning remains open.
+- CSS: 24.27 kB / 6.12 kB gzip.
+- An initial two-client sample observed roughly 160-435 ms per synchronization request. This is test-machine latency, not a geographically representative benchmark or SLA.
+- Touch emulation does not establish real-phone frame rate. Desktop 60 FPS and mobile 30 FPS remain unverified.
+- Hosted state uses one transactional world row. It serializes commands reliably but is a throughput bottleneck. Five active creation slots are configured; reconnect concurrency and sustained load need measurement.
 
 ## Remaining release gates
 
-1. Install from the lockfile on the intended host; apply migrations; verify one-instance ownership and the maintenance restart procedure against native PostgreSQL.
-2. Run the transport suite and independent-browser co-op/social rounds through the real HTTPS endpoint. Cover 3, 5 and 8 players, reconnects, host loss, vote ties and repeated rematches.
-3. Complete keyboard and real-touch investigations through every console, all three repairs, evidence publication/verification/comparison, voting and results. Extend the browser suite to cover the full investigation rather than lobby/communication alone.
-4. Inspect actual WebSocket traffic for private-information leaks; exercise invalid origins, stolen/reused command IDs, payload limits and reconnect abuse over the network.
-5. Playtest traitor decision-making and agent counterplay. Measure repair duration, discovery/recovery times, upload interruption rates, votes, win rates and player comprehension. No balance claim is justified yet.
-6. Measure frame time, draw calls, memory, loading and network throughput on desktop and real midrange phones; test context loss and weaker connections.
-7. Expand to three polished mysteries after the first network loop is confirmed. Five remains the content target if time permits. Terminal placement randomization, richer minigames, draggable board layout, extensive audio, final art/animations and competition media remain outstanding.
+1. Rerun the corrected complete-round browser test in a runtime that permits Chromium. Verify live voting, results and rematch, then social outcomes, ties, abstentions and exfiltration counterplay.
+2. Test real devices, weak networks, context loss, frame time, memory and concurrent rooms.
+3. Human playtests for comprehension, traitor choices, recovery and win-rate balance.
+4. Refine the Evidence Wall, environment art, animation, sound, onboarding and accessibility.
+5. Expand to three polished mysteries; five remains the target if time permits. Only one exists now.
+6. Final cover, gameplay capture, submission description and demo recording.
 
-## Blockers and cost status
-
-- This workspace denies local TCP access, including Chromium navigation to the game server. Its separate browser automation runtime also failed to initialize. Permissions were not bypassed.
-- No accessible public Node/WebSocket host and production PostgreSQL credentials were supplied or provisioned. A static frontend URL alone would not satisfy the game requirements.
-- No services were purchased, no paid infrastructure was started, and the declined hosting plugin was not used.
-
-The source bundle is the handoff for this checkpoint. It is not a substitute for the missing public URL or the required live multiplayer verification.
+No paid service or upgrade was purchased. This is an early playable milestone, not completion of all competition requirements.
