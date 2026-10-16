@@ -42,7 +42,7 @@ export default function App(){
  const join=async()=>{localStorage.setItem('aegis-name',name);await doAction(entry==='join'?'room.join':'room.create',entry==='join'?{name,code:code.toUpperCase()}:{name,mode});};
  const ownReady=room?.players.find(p=>p.id===self?.id)?.ready;const allClues=[...(self?.clues??[]),...(room?.board??[])].filter((e,i,a)=>a.findIndex(v=>v.id===e.id)===i);
  const clue=allClues.find(c=>c.id===chosen);const close=()=>{setPanel(null);setStation(null);};
- return <div className={`app ${reduced?'reduced':''}`}>
+ return <div className={`app quality-${quality} ${reduced?'reduced':''}`}>
   <div className={`world ${!room?'menu-world':''}`}><World room={room} self={self} onStation={selectStation} onMove={go} selected={station} quality={quality} reduced={reduced} onReady={()=>setReady(true)} measuring={measuring} onPerformance={sample=>{setPerformance(sample);setMeasuring(false);}}/></div>
   <div className="vignette"/>
   <header className="topbar"><button className="brand" onClick={()=>setPanel('guide')} aria-label="Mission guide"><span className="brand-symbol">△</span><span>AEGIS<span className="brand-small">INTELLIGENCE DIVISION</span></span></button><div className="top-actions"><span className={`connection ${status}`}><i/>{status==='online'?'SECURE LINK':status==='connecting'?'CONNECTING':'RECONNECTING'}</span><button className="icon-button" aria-label={audio?'Mute sound':'Enable sound'} onClick={()=>{setAudio(!audio);sound('click',!audio);}}>{audio?<Volume2 size={18}/>:<VolumeX size={18}/>}</button><button className="icon-button" aria-label="Settings" onClick={()=>setPanel('settings')}><Settings size={18}/></button></div></header>
