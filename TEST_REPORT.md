@@ -1,70 +1,64 @@
-# Milestone B1 verification report
+# B2 verification report
 
-Recorded October 16, 2026. Public development build, one mystery. This supersedes the pre-deployment October 15 checkpoint.
+Updated October 17, 2026. The successful public browser run completed October 16 at 17:08 UTC.
 
 **Play:** https://double-agent-blackout-protocol-radhe12.vercel.app
 
-**Hosting:** Vercel production functions with dedicated Neon PostgreSQL in Singapore. Guest cookies are HttpOnly/Secure; roles and canonical evidence remain server-side. Hosted transport uses real HTTPS polling. The dedicated Node/WebSocket implementation remains available separately.
+**Evidence:** [GitHub Actions run 38936066317](https://github.com/IntelliCoder-AI/double-agent-blackout-protocol-multi-player-game/actions/runs/38936066317), job 117091758836, conclusion **success**. Tested source: verification head 357da28b5fc472c8da8a676e3456161fe1e5aeea; deployed game commit 973ee5173586af98c8e3dd6b90e67900b731454a. PR #1 merges that verified workflow and test source into main.
 
-## Results obtained
+## Verified results
 
-| Check | Result | Scope |
-| --- | --- | --- |
-| Rules, privacy, sabotage, voting, recovery, SQL persistence and receipts | PASS | 25 automated tests, including delayed navigation and room-capacity regressions |
-| Production TypeScript/Vite/server build | PASS | Local build and clean Vercel build |
-| Public readiness endpoint | PASS | HTTP 200 with database readiness |
-| Two independent guests create/join, ready and receive co-op roles | PASS | Separate Chromium contexts against production |
-| Three-player social lobby and private roles | PASS | Exactly one traitor; public players contain no role/session; public room contains no roles/culprit |
-| Live invalid actions | PASS | Agent sabotage, remote scan, invalid movement and stale-round actions rejected |
-| Origin and authentication | PASS | Invalid origin 403; missing session 401 |
-| Private recovery and uplink repair | PASS | UI navigation, timed scanning and all three repair steps |
-| Host migration and reconnect | PASS | Host page closed; host migrated; returning cookie retained identity and role |
-| Mobile layout and touch movement | PASS, EMULATED | Chromium 390x844; touch changed position; no horizontal overflow |
-| Shared Evidence Wall and supported connections | PASS | Four authenticated records synchronized; both evidence-backed connections validated through UI |
-| Full co-op evidence-to-rematch run | INCOMPLETE | Live run reached discussion; test wait expired 17 seconds before ballot opening |
-| Physical devices and human balance | NOT RUN | No hardware FPS or enjoyment claims |
+| Check | Actual result and scope |
+| --- | --- |
+| Automated rules, privacy, five-case validity, sabotage, recovery, voting, SQL and idempotency | **35 passed, 0 failed, 0 skipped** in Linux CI |
+| PostgreSQL contention | Passed with real PostgreSQL 16: responsive snapshots, serialized privileged actions |
+| Production build and public readiness | Passed: TypeScript, Vite, server bundles and HTTP 200 database readiness |
+| Social room, three independent guests | Passed: create/join, ready/start, exactly one private traitor |
+| Private-state projection | Passed: other roles, guest sessions and culprit absent from public room/player fields |
+| Invalid live actions | Passed: agent sabotage, remote recovery, out-of-bounds input and stale-round requests rejected |
+| Touch and layout | **Passed in emulation only:** 390x844 Chromium touch input changed server position; no horizontal page overflow |
+| Host migration and reconnect | Passed: closed host page, authority moved; returning guest retained identity and role |
+| Full hosted co-op investigation | Passed: two separate guest contexts, private grants, real walking, four timed recoveries and authentications, uplink repair |
+| Living Evidence Wall | Passed: four shared records synchronized and both supported links accepted; culprit derived from their published candidate intersection |
+| Co-op reload recovery | Passed: returning client retained its identity during the investigation |
+| Live ballot and results | Passed: both evidence-backed ballots recorded; server produced agents' victory |
+| Rematch | Passed: both clients returned to the lobby with the same room code, then left normally |
+| Browser JavaScript errors | **Zero page errors** in both successful live scripts |
 
-No JavaScript page errors were recorded in the completed three-player security/mobile/reconnect run. This is not a formal security audit. Live social resolution with 5-8 players, adversarial concurrency, soak tests and human traitor play remain unverified.
+These were independent Chromium browser contexts with separate guest cookies connecting over the Internet to the actual Vercel/Neon backend. They were not separate physical devices. Tests used UI actions, real server clocks and ordinary movement; they did not inject game state, teleport players or shorten production timers.
 
-## Defects found through live testing
+All five cases also passed randomized solvability and command-driven solution/ballot/rematch checks. Only the first case has the complete public-browser evidence-to-rematch verification described above. Live social resolution, larger rosters and all-case browser runs remain broader verification work.
 
-- Short input expiry caused poor movement over Internet polling. Hosted input now expires after one second; dedicated WebSocket input retains its shorter timeout. Speed and collision validation remain authoritative.
-- Small path segments caused overshoot and corridor stalls. Paths now retain turns and straight segments, add boundary clearance, and require closer turn arrival. A regression test simulates delayed updates across eight consoles.
-- Completed disconnected missions exhausted creation slots. Their debriefs now remain reconnectable without consuming active creation slots; retained storage has a separate bound.
-- An early browser script assumed fixed clue ownership and timed out at a correctly locked terminal. It now respects randomized grants and two-minute shared recovery.
-- The full-round test allowed 240 seconds to reach voting after evidence collection, which was 17 seconds too short for that run's remaining investigation and discussion. The wait is now 360 seconds. The rerun could not launch Chromium in the current restricted runtime (Windows exit code 3221225506); live voting/results/rematch are therefore still unverified.
+## Fixes established through testing
 
-Failed runs are not counted as passes. Live scripts use UI actions, real server clocks and public HTTP responses; they do not inject game state or teleport players.
+- Handled pre-parsed request bodies before reading an already-consumed stream; preserved byte limits and split UTF-8 decoding.
+- Reduced world-row contention for transient snapshots/input while keeping sensitive mutations and stop packets serialized.
+- Prevented disconnected lobbies/completed rounds from exhausting active creation slots; retained records keep a separate storage bound.
+- Made initialization status nonblocking and cleared held controls on blur without cancelling an intentional route.
+- Waited for rendered panels in browser scripts and fixed clear routes stopping one grid cell short.
+- Replaced delayed client feedback steering with server-planned click-to-walk routes. The server enforces speed, collision, destination bounds, cancellation and interaction range. This removed the observed console drift.
+- Batched static environment surfaces while preserving interactive targets and textured labels; added geometry/cleanup regression coverage.
+- Corrected a shared module's ESM import extension after readiness caught a function startup failure. That failed deployment and earlier failed test runs are not counted as passes.
 
-## Reproduce
+## Performance and limits
 
-```sh
-npm ci
-npm test
-npm run build
-npx playwright install chromium
-node tests/live/security.cjs
-node tests/live/coop.cjs
-```
+The successful two-guest hosted run sampled 1,040 synchronization responses: median **267.237 ms**, p95 **321.592 ms** from that CI location. This is one test-machine observation, not a global latency guarantee or load test.
 
-Live tests create their own guests on the public URL. Set BASE_URL to a staging deployment to avoid production testing. CHROME_EXECUTABLE optionally selects a local Chromium executable. The co-op test takes a normal-duration round. Screenshots and console output document observations. Separate browser profiles/devices represent independent guests; tabs sharing cookies share one identity.
+The passing build measured application JavaScript **256.40 kB / 81.27 kB gzip**, renderer **902.70 kB / 244.32 kB gzip**, CSS **28.15 kB / 7.05 kB gzip**. The renderer chunk warning remains.
 
-## Performance and capacity
+An earlier offline Windows headless Chromium/SwiftShader menu-renderer diagnostic recorded 139 draw calls, 14,434 triangles and 6.6 FPS over 10.11 seconds at 1200x800, without JavaScript page errors. It is a software-GPU diagnostic, not a physical desktop/mobile benchmark, and does not satisfy the hardware frame-rate targets. Performance graphics reduce resolution, shadows, glass compositing and obscured/background rendering; phone FPS and sustained thermals still need measurement.
 
-- Application JavaScript: 238.82 kB / 75.61 kB gzip.
-- Three.js renderer: 902.67 kB / 244.31 kB gzip. The large-chunk warning remains open.
-- CSS: 24.27 kB / 6.12 kB gzip.
-- An initial two-client sample observed roughly 160-435 ms per synchronization request. This is test-machine latency, not a geographically representative benchmark or SLA.
-- Touch emulation does not establish real-phone frame rate. Desktop 60 FPS and mobile 30 FPS remain unverified.
-- Hosted state uses one transactional world row. It serializes commands reliably but is a throughput bottleneck. Five active creation slots are configured; reconnect concurrency and sustained load need measurement.
+The hosted backend serializes a shared world row and limits initial capacity to five active rooms. It is suitable for this early judging build; sustained multi-room throughput and free-tier quota consumption are not established. The separate dedicated Node/WebSocket transport remains available in source.
 
 ## Remaining release gates
 
-1. Rerun the corrected complete-round browser test in a runtime that permits Chromium. Verify live voting, results and rematch, then social outcomes, ties, abstentions and exfiltration counterplay.
-2. Test real devices, weak networks, context loss, frame time, memory and concurrent rooms.
-3. Human playtests for comprehension, traitor choices, recovery and win-rate balance.
-4. Refine the Evidence Wall, environment art, animation, sound, onboarding and accessibility.
-5. Expand to three polished mysteries; five remains the target if time permits. Only one exists now.
-6. Final cover, gameplay capture, submission description and demo recording.
+1. Real Android/Chrome and iPhone/Safari sessions: touch every primary action, portrait/landscape, lock/unlock, network changes, loading, frame time and sustained heat.
+2. Human onboarding, fairness and enjoyment tests at 3, 5 and 8 players, including meaningful forgery, jam, repair delay, exfiltration and shared-recovery counterplay. No human win-rate or comprehension data has been collected.
+3. Broader live social outcomes, ties, abstentions, upload aborts, 5–8-player rooms, additional-case browser playthroughs and weak-network/soak tests. The automated checks are not a formal security audit.
+4. Final hardware-aware visual/accessibility polish, genuine promotional gameplay captures, cover artwork and demo recording.
 
-No paid service or upgrade was purchased. This is an early playable milestone, not completion of all competition requirements.
+Settings exports actual device diagnostics. Debriefs export anonymized server metrics and optional participant feedback. See PLAYTEST_GUIDE.md. These tools are implemented; physical-device and human observations have not been fabricated.
+
+Screenshots were generated during the browser run on the ephemeral runner; they are not delivered promotional assets. Local cached Chromium can launch, but this runtime blocked its public DNS/localhost access during the previous session, so public tests ran in GitHub Actions.
+
+No paid service or upgrade was purchased. This is a verified development milestone, not completion of the competition release.

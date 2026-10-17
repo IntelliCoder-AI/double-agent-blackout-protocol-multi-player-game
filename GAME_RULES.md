@@ -1,14 +1,28 @@
-# Case 01 — The Ninety-Second Ghost
+# Five handcrafted investigations
 
-These are the implemented B1 rules. Balance is provisional until human multiplayer playtests are completed.
+These are the implemented B2 rules. Balance remains provisional until human multiplayer playtests are completed.
 
-## The provable truth
+The host selects a dossier in the lobby. Changing it clears readiness. Each case has six original signed records, a private calibration puzzle, and two ambiguous custody groups whose intersection contains exactly one culprit. The camera and access keys always belong to different operatives.
+
+| Case | Reconstruction | Second proof |
+| --- | --- | --- |
+| The Ninety-Second Ghost | Remove a 90-second camera offset | Core-bay event and access receipt |
+| The Mirror Courier | Reverse the reflected badge identifier | Courier transfer and custody receipt |
+| The Silent Relay | Convert station time from UTC+2 | Antenna event and signing-key access |
+| Cold Storage | Repair a three-step sequence rollback | Cryogenic transfer and custody receipt |
+| The Midnight Dead Drop | Correct a 90-second offset across midnight | Dead-drop event and bridge access |
+
+## Example: the provable truth in Case 01
 
 A memory core was physically taken during event E-401 at 02:14 UTC. Surveillance local time runs 90 seconds ahead, so its frame shows 02:15:30. The camera silhouette identifies one ambiguous group; a separate authenticated credential identifies another. Their intersection contains exactly one suspect, the culprit. The two credential factors cannot be transferred during the recorded interval.
 
 The six sources are the camera export, access log, clock receipt, personnel custody rule, immutable frame signature and core-bay recorder. Sources are divided without using the player's role. The camera and access-log keys always go to different players. A traitor can change the camera's claimed UTC timestamp, but never the signed source or candidate sets. Verification restores canonical content and retains a visible discrepancy receipt.
 
-Evidence terminals currently occupy fixed positions. Assignments, suspect groups and roles are randomized. Randomized terminal placement and additional cases are not implemented in this checkpoint.
+Evidence terminals currently occupy fixed positions. Assignments, suspect groups and roles are randomized. Terminal location randomization is not implemented; all five cases reuse the same facility with distinct signed facts and calibration puzzles.
+
+## Movement and interaction
+
+Click a floor destination or choose a console from Facility. The server plans and advances the route using normal movement speed and collision checks. WASD/arrows and touch direction buttons override a route. Opening a panel cancels navigation; physical interactions stop the route before channeling. Cabinet consoles use a reachable nearby floor point. Every recovery, repair, sabotage and publication still checks the actor's actual server position.
 
 ## Round timing
 
@@ -30,8 +44,10 @@ Shared recovery allows any operative to recover an unshared clue and automatical
 
 Published evidence is synchronized to the team. Authentication requires a physical verification terminal. A supported link requires both records to be shared and verified, the correct pair, a matching relationship, and the actual supporting value:
 
-- Clock receipt + camera export: corrected UTC must be `02:14:00`.
-- Core-bay event + access log: signed event identifier must be `E-401`.
+- Calibration source + camera export: reconstruct the value using this case's signed correction rule. In Case 01, corrected UTC is `02:14:00`.
+- Transfer sensor + access log: find the same signed event identifier in both records. In Case 01, it is `E-401`.
+
+The five answers and forgery variants live only in the server case definitions. Public mission briefings contain instructions, not solution keys.
 
 Other pairs, unsupported values, repeated links and overly frequent attempts are rejected. The wall never accepts arbitrary connections as proof. Every non-abstaining ballot must attach a source published on this wall. Comparison bonuses help deliberation; a correct indictment does not require completing every repair or comparison.
 

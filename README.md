@@ -1,12 +1,12 @@
 # DOUBLE AGENT: BLACKOUT PROTOCOL
 
-Milestone B1 development source — October 15, 2026.
+Milestone B2 development source — October 17, 2026.
 
-A browser-native multiplayer investigation game built with React, Three.js / React Three Fiber, an authoritative Node WebSocket server, and PostgreSQL. One implemented mystery: **The Ninety-Second Ghost**. Supports two-player cooperative play against an NPC and a 3–8-player mode with one hidden human traitor.
+A browser-native multiplayer investigation game built with React, Three.js / React Three Fiber, an authoritative Node WebSocket server, and PostgreSQL. Five implemented mysteries: **The Ninety-Second Ghost, The Mirror Courier, The Silent Relay, Cold Storage,** and **The Midnight Dead Drop**. Supports two-player cooperative play against an NPC and a 3–8-player mode with one hidden human traitor.
 
 **Play:** https://double-agent-blackout-protocol-radhe12.vercel.app
 
-**Status:** deployed on Vercel with server-authoritative HTTPS synchronization and a private Neon PostgreSQL database. The production build and 25 automated tests pass. Independent browser tests verified room creation/joining, private roles, interactive evidence recovery, an uplink repair, mobile-emulated touch movement, host migration and reconnection. See TEST_REPORT.md for the exact release gates. This is the first playable one-case B1 build, not the finished competition release.
+**Status:** deployed on Vercel with server-authoritative HTTPS synchronization and a private Neon PostgreSQL database. The production build and all 35 automated tests passed in Linux CI, including native PostgreSQL contention, five-case validity, private state and authoritative navigation. Independent browser tests verified room creation/joining, private roles, interactive evidence recovery, an uplink repair, mobile-emulated touch movement, host migration and reconnection. A full public co-op round passed through supported evidence links, voting, agents' victory and same-room rematch with zero JavaScript page errors. See TEST_REPORT.md for the exact release gates. This remains a development release; physical-phone testing, human balance sessions and competition capture are pending.
 
 ## Run locally
 
@@ -37,6 +37,10 @@ Configuration may be supplied as environment variables. To load an environment f
 
 See [GAME_RULES.md](GAME_RULES.md) for exact timing, sabotage, ties, abstentions, recovery and disconnection rules.
 
+## Device and human playtest reports
+
+Settings measures ten visible seconds of rendering and exports FPS/frame time, viewport and scene workload. Results exports anonymized round metrics and optional participant feedback. These tools collect observations; they do not establish phone performance or human balance without real sessions. See [PLAYTEST_GUIDE.md](PLAYTEST_GUIDE.md).
+
 ## Validate
 
 ```sh
@@ -54,7 +58,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Set `TEST_URL` to test an existing HTTPS deployment. The suite creates independent desktop contexts and an emulated touch/mobile context. Emulation is **not** a substitute for real phones or human balance testing. The browser suite currently covers room creation/join, roles, chat and reconnection; it does not yet automate the entire investigation/voting path.
+Set `TEST_URL` to test an existing HTTPS deployment. The suite creates independent desktop contexts and an emulated touch/mobile context. Emulation is **not** a substitute for real phones or human balance testing. The dedicated Playwright suite covers room creation/join, roles, chat and reconnection. `node tests/live/security.cjs` and `node tests/live/coop.cjs` exercise the public hosted transport, including the complete normal-duration co-op investigation, ballot, results and rematch. Both hosted scripts passed in [run 38936066317](https://github.com/IntelliCoder-AI/double-agent-blackout-protocol-multi-player-game/actions/runs/38936066317). See TEST_REPORT.md for scope and remaining gates.
 
 ## Production deployment
 
@@ -67,7 +71,7 @@ The Vercel adapter uses real HTTPS snapshot synchronization, with a single Postg
 3. Set production environment variables: `DATABASE_URL` (encrypted), `APP_ORIGIN` (exact public HTTPS origin), `VITE_TRANSPORT=https`, and `MAX_ACTIVE_ROOMS=5`. Never prefix database credentials with `VITE_`.
 4. Deploy and verify `/health/ready`, then test room creation and joining in independent browser profiles before releasing the URL. Public judging requires deployment login protection to be disabled for this game project.
 
-The HTTPS client coalesces movement updates and polls while connected, approximately 5-10 updates/second depending on request latency. This is an early deployment transport; actual Internet latency, frame pacing, mobile performance and quota consumption must be measured before calling it release-ready. Database transactions serialize a maximum of five rooms. It is not a high-concurrency architecture. Free-tier quota exhaustion may stop play; no paid upgrade is automatic.
+Click-to-walk destinations are planned and advanced on the authoritative server. The HTTPS client coalesces direct movement input. Idle investigation polls wait about 350 ms after a response; menus/lobbies wait 1 second. Queued commands send sooner, and actual frequency depends on network latency. This is an early deployment transport; actual Internet latency, frame pacing, mobile performance and quota consumption must be measured before calling it release-ready. Database transactions serialize a maximum of five rooms. It is not a high-concurrency architecture. Free-tier quota exhaustion may stop play; no paid upgrade is automatic.
 
 Guest cookies are Secure/HttpOnly/SameSite=Strict. Connection ownership is tracked in the database; a second tab using the same cookie replaces the first. Missing polls expire presence after 15 seconds; existing host-migration and round-quorum rules then apply. Function restarts preserve stored rounds. Timers advance using database time when requests arrive, and movement catch-up is bounded. Idle rooms do not consume a continuously running timer.
 
@@ -118,12 +122,12 @@ Rooms, guest identities and scores persist. A server restart ends an active roun
 ## Source map
 
 - `server/engine.ts`: authoritative rules, timers, private projection and outcomes.
-- `server/case.ts`: first handcrafted mystery, ambiguity groups and canonical/forged evidence.
+- `server/case.ts`: five handcrafted mysteries, ambiguity groups and canonical/forged evidence.
 - `server/index.ts`: guest cookies, authenticated WebSockets, validation, limits, persistence and synchronization.
 - `server/store.ts`, `server/migrations/`: PostgreSQL storage and transactional command receipts.
-- `shared/world.ts`: facility geometry, interactions and authoritative movement collision.
-- `src/World.tsx`: original procedural 3D headquarters and avatars.
-- `src/App.tsx`: complete first-case interface, repairs, Evidence Wall, voting and debrief.
+- `shared/world.ts`, `shared/navigation.ts`: facility geometry, server routes, interactions and collision.
+- `src/World.tsx`, `src/static-batch.ts`: original procedural 3D headquarters, avatars, static surface batching and graphics presets.
+- `src/App.tsx`: mission selection, repairs, Evidence Wall, voting, settings and debrief.
 - `tests/`: rules, SQL, transport and browser checks.
 - `artifacts/`: clearly labeled offline render captures and verification output.
 
