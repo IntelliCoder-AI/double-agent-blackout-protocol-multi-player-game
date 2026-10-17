@@ -1,4 +1,51 @@
-# B2 verification report
+# Verification report
+
+Updated October 17, 2026.
+
+**Play:** https://double-agent-blackout-protocol-radhe12.vercel.app/
+
+## Reviewer access update
+
+**Evidence:** [successful GitHub Actions run 39006096041](https://github.com/IntelliCoder-AI/double-agent-blackout-protocol-multi-player-game/actions/runs/39006096041), job **117318882931**, completed October 17 at approximately **05:39 UTC**. Verification head and deployed application source: **4ebbeb97c918c7f20828ae47d32c74af786f19de**. Later documentation and screenshot updates do not change that application code.
+
+| Check | Actual result and scope |
+| --- | --- |
+| Rules, five-case validity, privacy, repairs, sabotage, navigation, persistence and practice | **41 passed, 0 failed, 0 skipped** in Linux CI; includes real PostgreSQL 16 contention |
+| Independent HTTP/WebSocket guests | **2 passed, 0 failed, 0 skipped**; scoped HttpOnly cookies, independent seats, reconnect, rooms, private roles, receipts and rematch |
+| Solo public practice | Passed: one human and a labeled ATLAS bot; actual bot walking, recovery, authentication, publication, supported wall comparisons, evidence-backed vote, agents' victory and rematch |
+| Evidence Wall requirement | Passed: early practice discussion disabled until both supported comparisons; bot ballot derives from authenticated published groups, not the hidden culprit |
+| One-browser multiplayer | Passed: New player opens a second seat in the same browser context without replacing the first; reload preserves the second identity |
+| Callsign editing | Passed: lobby rename synchronizes to the other player; unit checks reject duplicate names and mid-round changes |
+| Empty lobby invites | Passed publicly: both guests leave, original code remains joinable, next entrant becomes host. Thirty-minute expiration is verified with simulated engine time |
+| Idle connection stability | Passed: both lobby guests remained connected and the monitored header had no reconnect transitions during a **46-second** idle interval |
+| Social mode and security | Passed: three independent Chromium guests, one private traitor; unauthorized sabotage, remote interaction, invalid movement and stale-round actions rejected |
+| Touch, host migration and reconnect | Passed in Chromium mobile emulation: touch changes authoritative position, no horizontal overflow; closed host transfers control; returning guest retains identity and role |
+| Full public human co-op round | Passed: two independent guest contexts, real walking, four timed recoveries and authentications, uplink repair, four published sources, two supported comparisons, reconnect, ballots, agents' win and same-code rematch |
+| Browser errors | All three public verification scripts completed with **zero JavaScript page errors** |
+| Build and readiness | Passed: TypeScript, Vite, server bundles and public database readiness |
+| Abandoned practice cleanup | Passed: bot-only lobbies do not consume human capacity or block expiration |
+| Fresh visual captures | Actual deployed desktop menu, narrow-screen menu, and live practice Evidence Wall; zero page errors in these captures |
+
+The full co-op run recorded **1,031 synchronization responses**, median **262.528 ms**, p95 **292.863 ms**, from one CI location. These are response timings for that run, not a global latency guarantee or a rendering FPS measurement.
+
+### Implemented behavior
+
+- Solo practice is separate from human multiplayer. The companion follows normal server-validated routes and proximity/channel rules, handles only its assigned evidence, and votes from the authenticated shared wall. It abstains without sufficient published evidence. Practice awards no XP.
+- The human still investigates, authenticates and publishes records. Both supported connections unlock an optional early practice discussion. Human multiplayer minimums and outcomes remain unchanged.
+- New player uses a separate public cookie namespace and its own secret HttpOnly credential. A namespace alone cannot authenticate. Existing default guest cookies remain supported.
+- Returning players can edit their own callsign in a lobby. Names stay fixed during live rounds.
+- Empty multiplayer lobbies survive for thirty idle minutes after the final explicit departure. Private practice rooms are removed on exit. Bot-only abandoned rooms expire.
+- Hosted requests force a persisted heartbeat at least every five seconds while requests succeed. Idle lobby/debrief presence has a 45-second grace; active rounds retain the 15-second threshold and existing quorum rules. A single brief request failure does not immediately flip an established connection offline; sustained failures do.
+
+### Earlier attempts and remaining limits
+
+An initial reviewer run failed its final error assertion because test setup accessed localStorage in an opaque popup document. Fixture setup now runs only on the game origin. A separate attempt observed an initial-sync timeout in the third browser before role assignment. Vercel reported no runtime errors for that interval; later read-only database inspection found no stalled query and a roughly 21 KB world state. These observations do not establish the timeout's cause. The final run above passed all checks; longer weak-network and cold-start soaks remain necessary.
+
+All five practice cases are verified through command-driven engine simulations. The public browser walkthroughs exercise Case 01; they do not establish a complete browser walkthrough of every case. Physical Android/iPhone testing, extended 5–8-player social sessions, human onboarding/enjoyment/balance sessions, accessibility refinement, and sustained real-device performance measurements remain release gates. The hosted capacity is five active rooms. This remains a playable development release.
+
+---
+
+## Earlier B2 verification
 
 Updated October 17, 2026. The successful public browser run completed October 16 at 17:08 UTC.
 
@@ -6,7 +53,7 @@ Updated October 17, 2026. The successful public browser run completed October 16
 
 **Evidence:** [GitHub Actions run 38936066317](https://github.com/IntelliCoder-AI/double-agent-blackout-protocol-multi-player-game/actions/runs/38936066317), job 117091758836, conclusion **success**. Tested source: verification head 357da28b5fc472c8da8a676e3456161fe1e5aeea; deployed game commit 973ee5173586af98c8e3dd6b90e67900b731454a. PR #1 merges that verified workflow and test source into main.
 
-## Verified results
+### Verified results
 
 | Check | Actual result and scope |
 | --- | --- |
@@ -29,7 +76,7 @@ These were independent Chromium browser contexts with separate guest cookies con
 
 All five cases also passed randomized solvability and command-driven solution/ballot/rematch checks. Only the first case has the complete public-browser evidence-to-rematch verification described above. Live social resolution, larger rosters and all-case browser runs remain broader verification work.
 
-## Fixes established through testing
+### Fixes established through testing
 
 - Handled pre-parsed request bodies before reading an already-consumed stream; preserved byte limits and split UTF-8 decoding.
 - Reduced world-row contention for transient snapshots/input while keeping sensitive mutations and stop packets serialized.
@@ -40,7 +87,7 @@ All five cases also passed randomized solvability and command-driven solution/ba
 - Batched static environment surfaces while preserving interactive targets and textured labels; added geometry/cleanup regression coverage.
 - Corrected a shared module's ESM import extension after readiness caught a function startup failure. That failed deployment and earlier failed test runs are not counted as passes.
 
-## Performance and limits
+### Performance and limits
 
 The successful two-guest hosted run sampled 1,040 synchronization responses: median **267.237 ms**, p95 **321.592 ms** from that CI location. This is one test-machine observation, not a global latency guarantee or load test.
 
@@ -50,7 +97,7 @@ An earlier offline Windows headless Chromium/SwiftShader menu-renderer diagnosti
 
 The hosted backend serializes a shared world row and limits initial capacity to five active rooms. It is suitable for this early judging build; sustained multi-room throughput and free-tier quota consumption are not established. The separate dedicated Node/WebSocket transport remains available in source.
 
-## Remaining release gates
+### Remaining release gates
 
 1. Real Android/Chrome and iPhone/Safari sessions: touch every primary action, portrait/landscape, lock/unlock, network changes, loading, frame time and sustained heat.
 2. Human onboarding, fairness and enjoyment tests at 3, 5 and 8 players, including meaningful forgery, jam, repair delay, exfiltration and shared-recovery counterplay. No human win-rate or comprehension data has been collected.

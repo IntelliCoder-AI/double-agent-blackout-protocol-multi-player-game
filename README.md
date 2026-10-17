@@ -16,15 +16,15 @@ No installation, account registration, or email is required.
 
 | Mode | Players | Objective |
 | --- | --- | --- |
-| Solo practice | 1 human + ATLAS bot | Learn the complete investigation, wall, voting, and rematch loop. |
-| Cooperative investigation | 2 | Work together to expose an NPC saboteur. Recommended for a first review. |
+| Solo practice | 1 human + ATLAS bot | Recommended for a judge testing alone. Complete the investigation, wall, voting, and rematch loop. |
+| Cooperative investigation | 2 | Work together to expose an NPC saboteur. |
 | Social deduction | 3–8 | Investigate alongside one hidden human traitor. |
 
 A complete mission takes approximately six minutes.
 
-1. Open the **[public game](https://double-agent-blackout-protocol-radhe12.vercel.app/)** and choose **Create mission**.
-2. Select a case and mode. Co-op is selected initially.
-3. Share the six-character room code or invitation link. Other players choose **Join with code**.
+1. Open the **[public game](https://double-agent-blackout-protocol-radhe12.vercel.app/)**. Choose **Practice with bot** when alone, or **Create mission** for human multiplayer.
+2. Enter a callsign. For multiplayer, select a mode; co-op is selected initially. Practice adds ATLAS automatically.
+3. For multiplayer, share the six-character room code or invitation link. Other players choose **Join with code**.
 4. Each player marks ready, then the host starts the mission.
 5. Read your private role, follow the investigation prompts, and compare findings with your team.
 6. After the result, use the rematch control to play again in the same room.
@@ -50,6 +50,10 @@ Return to Operations to publish your findings. Authenticate records at a verific
 Connections require the correct records, relationship, and supporting value. Arbitrary links are rejected. Every non-abstaining ballot must cite a source published on this wall, making evidence sharing part of the actual decision process.
 
 Look for the suspect present in **both authenticated custody groups**. Discuss inconsistencies before accusing anyone.
+
+![Living Evidence Wall during a real practice session, showing three authenticated records published by ATLAS](docs/images/practice-evidence-wall.png)
+
+*Live practice session: ATLAS has recovered, authenticated, and published three records. The human investigator must contribute the remaining evidence and support the connections.*
 
 ### Repair systems and counter sabotage
 
@@ -103,9 +107,9 @@ Roles, clue assignments, and suspect groups vary between rounds. The cases share
 
 This is a **publicly playable development release**, prepared for the Handshake AI Skills Studio Multiplayer Game Challenge.
 
-**Implemented:** real room creation and joining, private roles and clues, synchronized movement, five cases, the shared Evidence Wall, repairs, sabotage, voting, results, reconnects, host migration, cumulative scores, and same-room rematches. The headquarters uses original procedural 3D geometry and synthesized audio.
+**Implemented:** solo practice with a labeled server bot, separate player tabs, editable lobby callsigns, retained empty invites, real room creation and joining, private roles and clues, synchronized movement, five cases, the shared Evidence Wall, repairs, sabotage, voting, results, reconnects, host migration, cumulative scores, and same-room rematches. The headquarters uses original procedural 3D geometry and synthesized audio.
 
-**Verified:** the recorded [successful CI run](https://github.com/IntelliCoder-AI/double-agent-blackout-protocol-multi-player-game/actions/runs/38936066317) passed 35 automated tests and the production build. Independent browser contexts completed a public co-op round through evidence recovery, authentication, wall comparisons, voting, victory, and rematch with zero JavaScript page errors. Additional browser checks covered private-state protections, rejected invalid actions, reconnects, host migration, and mobile-emulated touch movement.
+**Verified:** the [successful reviewer-access CI run](https://github.com/IntelliCoder-AI/double-agent-blackout-protocol-multi-player-game/actions/runs/39006096041) passed 41 rules/database tests, two real HTTP/WebSocket transport tests, and the production build. Public browser scripts completed a solo practice round, two independent seats in one browser, renaming, empty-room rejoin, idle stability, social-role security, touch emulation, host migration, reconnection, and a full two-human co-op round through victory and same-room rematch. All three scripts reported zero JavaScript page errors. See the testing report for scope, earlier attempts, and remaining limits.
 
 **Remaining release gates:** physical Android/iPhone testing, human balance and onboarding sessions, broader social-mode and weak-network testing, walkthroughs of every case, and final visual/performance polish. Mobile emulation does not establish real-phone performance. The current social mode uses one traitor; advanced two-traitor play is deferred.
 
