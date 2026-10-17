@@ -15,7 +15,7 @@ permissions:
   contents: read
 concurrency:
   group: public-multiplayer-verification
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-24.04
