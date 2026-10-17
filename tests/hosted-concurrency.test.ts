@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import pg from 'pg';
+import pg,{type PoolClient} from 'pg';
 import {HostedGame,hostedSchema} from '../server/hosted';
 import {Engine,defaultTiming} from '../server/engine';
 test('native PostgreSQL contention keeps snapshots responsive and privileged actions serialized',{skip:!process.env.CI_POSTGRES_URL,timeout:20000},async()=>{
  const url=new URL(process.env.CI_POSTGRES_URL!);assert.ok(['127.0.0.1','localhost'].includes(url.hostname),'Use a disposable local test database');
- const pool=new pg.Pool({connectionString:url.href,max:8});let lock:pg.PoolClient|undefined;
+ const pool=new pg.Pool({connectionString:url.href,max:8});let lock:PoolClient|undefined;
  try{
   await pool.query(hostedSchema);const game=new HostedGame(pool,()=>new Engine({...defaultTiming,reveal:1}));
   const guests=[] as {token:string;controller:string}[];for(let i=0;i<3;i++)guests.push({token:(await game.session(undefined,'ci-'+i)).token!,controller:randomUUID()});

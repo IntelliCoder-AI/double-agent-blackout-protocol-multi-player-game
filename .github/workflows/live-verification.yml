@@ -5,6 +5,11 @@ on:
     paths:
       - '.github/workflows/live-verification.yml'
       - 'tests/live/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-verification.yml'
+      - 'tests/live/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +20,18 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: aegis_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d aegis_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      CI_POSTGRES_URL: postgresql://postgres:ci-test-only@127.0.0.1:5432/aegis_test
       BASE_URL: https://double-agent-blackout-protocol-radhe12.vercel.app
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -29,9 +45,14 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Public API readiness
+        run: |
+          node -e "fetch(process.env.BASE_URL+'/health/ready').then(async r=>{const v=await r.json();console.log(JSON.stringify({event:'public-health',status:r.status,...v}));if(!r.ok||v.version!=='b2-five-cases')process.exitCode=1;})"
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Live social security and reconnect
+        id: security
         run: node tests/live/security.cjs
       - name: Complete live co-op round and rematch
+        if: ${{ !cancelled() && steps.security.outcome != 'skipped' }}
         run: node tests/live/coop.cjs
