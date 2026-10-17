@@ -86,3 +86,11 @@ Co-op assigns both humans loyal roles. One of three NPC suspects is the culprit.
 - Winning humans receive 100 cumulative points, a draw gives 25, and a no-contest gives zero. In co-op an NPC victory awards neither human a win. The host can reopen the same room for a rematch.
 
 Human balance testing, adversarial latency testing and practical repair-duration tuning remain release gates; mathematical case validity alone does not establish that the game is balanced or fun.
+
+## Solo practice and reviewer access
+
+Practice is a separate, private mode with one human and one clearly labeled server bot. ATLAS uses the normal movement, proximity, scan, verification and publication rules for its assigned records. It never reads the hidden culprit when deciding a ballot: it intersects only the published, authenticated camera and access groups, and otherwise abstains. The NPC saboteur uses the co-op rules. Practice grants no XP, supports rematches, and can be exited at any time. Supporting both wall comparisons and publishing/authenticating both identifying records unlocks an optional early 15-second discussion. Human multiplayer minimums and voting rules are unchanged.
+
+The lobby offers a separate-seat tab with its own HttpOnly guest cookie. The seat identifier in the URL is a public cookie namespace, not a credential; it cannot authenticate without that cookie. Refresh keeps the seat. Callsigns are editable in the lobby, validated for uniqueness, and fixed during a round.
+
+When the last guest explicitly leaves a multiplayer lobby or completed mission, the code remains joinable for 30 idle minutes; the next entrant becomes host. Practice rooms are deleted when exited. Disconnected guests retain their seats under the existing reconnect rules. Hosted idle lobbies allow a 45-second presence grace; active rounds retain their 15-second presence threshold and subsequent quorum rules. Forced-write heartbeats renew presence at least every five seconds while requests succeed. Browser background suspension beyond the grace can still disconnect a guest.

@@ -11,9 +11,10 @@ export class GameError extends Error { constructor(public code:string, message:s
 function need(condition:unknown,message:string,code='INVALID_ACTION'):asserts condition {if(!condition)throw new GameError(code,message);}
 const empty=z.object({}).strict();
 const schemas:Record<string,z.ZodType>={
-  'room.create':z.object({name:z.string().trim().min(2).max(20),mode:z.enum(['social','coop'])}).strict(),
+  'room.create':z.object({name:z.string().trim().min(2).max(20),mode:z.enum(['social','coop','practice'])}).strict(),
   'room.join':z.object({name:z.string().trim().min(2).max(20),code:z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/)}).strict(),
   'room.leave':empty,'lobby.ready':z.object({ready:z.boolean()}).strict(),'round.start':empty,'round.rematch':empty,
+  'lobby.name':z.object({name:z.string().trim().min(2).max(20)}).strict(),'practice.discuss':empty,
   'lobby.case':z.object({caseId:z.enum(MISSIONS.map(m=>m.id) as [string,...string[]])}).strict(),
   'appearance':z.object({color:z.enum(COLORS as [string,...string[]])}).strict(),
   'input.move':z.object({x:z.number().min(-1).max(1),z:z.number().min(-1).max(1)}).strict(),
@@ -27,7 +28,7 @@ const schemas:Record<string,z.ZodType>={
   'chat':z.object({text:z.string().trim().min(1).max(280)}).strict(),
   'quick':z.object({key:z.enum(['found','verify','help','conflict','abort']),reference:z.string().max(30).optional()}).strict(),
 };
-export interface Player extends Point { id:string; session:string; name:string;color:string;ready:boolean;connected:boolean;lastSeen:number;score:number;dx:number;dz:number;inputAt:number;route?:Point[] }
+export interface Player extends Point { id:string; session:string; name:string;color:string;ready:boolean;connected:boolean;lastSeen:number;score:number;dx:number;dz:number;inputAt:number;route?:Point[];bot?:boolean;botAt?:number }
 interface Channel {kind:'scan'|'verify'|'abort'|'forge'|'jam'|'delay'|'exfil';target:string;station:string;endsAt:number;startedAt:number}
 export interface Round {
   caseId?:string;investigationEndedAt?:number;
@@ -47,7 +48,7 @@ export class Engine {
   member(r:Room,session:string){const p=r.players.find(p=>p.session===session);need(p,'Join a mission first.','NOT_MEMBER');return p;}
   connected(session:string,online:boolean,now=Date.now()) {const r=this.locate(session);if(!r)return;const p=this.member(r,session);p.connected=online;p.lastSeen=now;p.route=[];p.dx=0;p.dz=0;r.updatedAt=now;}
   elapsed(round:Round,now:number){return round.investigationAt?Math.max(0,(round.pauseAt??now)-round.investigationAt):0;}
-  quorum(r:Room){return r.mode==='coop'?2:Math.max(2,Math.ceil(r.players.length/2));}
+  quorum(r:Room){return r.mode!=='social'?2:Math.max(2,Math.ceil(r.players.length/2));}
   near(p:Point,id:string){const s=STATIONS.find(x=>x.id===id);need(s&&distance(p,s)<=2.65,'Move closer to that station.','TOO_FAR');return s;}
   live(r:Room,p:Player,now:number){const t=r.round;need(t&&t.phase==='investigation','Investigation is not active.','WRONG_PHASE');need(!t.pauseAt,'Waiting for agents to reconnect.','PAUSED');need(now<t.deadline,'The investigation has ended.');return t;}
   log(t:Round,text:string,now:number){t.timeline.push({text,at:now});if(t.timeline.length>60)t.timeline.shift();}
@@ -63,24 +64,27 @@ export class Engine {
         need(occupied.length<Number(process.env.MAX_ACTIVE_ROOMS??5)&&this.rooms.size<100,'Headquarters is at capacity. Try again shortly.','CAPACITY');
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';do{code=Array.from(randomBytes(6),b=>alphabet[b%32]).join('');}while(this.rooms.has(code));
         r={code,mode:a.mode,hostId:'',players:[],round:null,chat:[],roundNumber:0,createdAt:now,updatedAt:now};this.rooms.set(code,r);
-      }else{const found=this.rooms.get(a.code);need(found,'Mission not found. Check the code.','NOT_FOUND');r=found;need(!r.round,'This mission is underway. Join after the rematch.','STARTED');}
-      need(r.players.length<(r.mode==='coop'?2:8),'This mission is full.','FULL');
+      }else{const found=this.rooms.get(a.code);need(found,'Mission not found. Check the code.','NOT_FOUND');r=found;need(r.mode!=='practice','Practice missions are private. Create your own practice mission.','PRIVATE_ROOM');need(!r.round,'This mission is underway. Join after the rematch.','STARTED');}
+      need(r.players.length<(r.mode!=='social'?2:8),'This mission is full.','FULL');
       const id=randomUUID();const name=r.players.some(p=>p.name.toLowerCase()===a.name.toLowerCase())?`${a.name.slice(0,16)} ${r.players.length+1}`:a.name;
       r.players.push({id,session,name,color:COLORS[r.players.length],ready:false,connected:true,lastSeen:now,score:0,x:-3+r.players.length*.8,z:3.5,dx:0,dz:0,inputAt:0});
-      if(!r.hostId)r.hostId=id;r.updatedAt=now;return r;
+      if(!r.hostId)r.hostId=id;if(r.mode==='practice'){r.players.push({id:randomUUID(),session:'bot:'+randomUUID(),name:'ATLAS / BOT',color:COLORS[1],ready:true,connected:true,lastSeen:now,score:0,x:-2.2,z:3.5,dx:0,dz:0,inputAt:0,bot:true});}r.updatedAt=now;return r;
     }
     const r=this.locate(session);need(r,'Join a mission first.','NOT_MEMBER');const p=this.member(r,session);
-    if(c.type==='room.leave'){need(!r.round||r.round.phase==='results','A live mission keeps your seat for reconnection.');r.players=r.players.filter(x=>x.id!==p.id);if(r.hostId===p.id)r.hostId=r.players[0]?.id??'';if(!r.players.length)this.rooms.delete(r.code);return null;}
-    if(c.type==='lobby.ready'){need(!r.round,'Readiness is available in the lobby.');p.ready=a.ready;}
+    if(c.type==='room.leave'){need(!r.round||r.round.phase==='results'||r.mode==='practice','A live mission keeps your seat for reconnection.');r.players=r.players.filter(x=>x.id!==p.id);if(r.mode==='practice'){this.rooms.delete(r.code);return null;}if(r.hostId===p.id)r.hostId=r.players.find(x=>x.connected)?.id??r.players[0]?.id??'';r.updatedAt=now;if(!r.players.length){r.round=null;r.chat=[];}return null;}
+    if(c.type==='lobby.name'){need(!r.round,'Change callsign in the lobby.');need(!r.players.some(x=>x.id!==p.id&&x.name.toLowerCase()===a.name.toLowerCase()),'That callsign is already in this mission.');p.name=a.name;}
+    else if(c.type==='lobby.ready'){need(!r.round,'Readiness is available in the lobby.');p.ready=a.ready;}
     else if(c.type==='appearance'){need(!r.round,'Change your appearance in the lobby.');p.color=a.color;}
-    else if(c.type==='lobby.case'){need(p.id===r.hostId,'Only the host can select a case.','FORBIDDEN');need(!r.round,'Choose a case in the lobby.');r.caseId=a.caseId;r.players.forEach(player=>player.ready=false);}
+    else if(c.type==='lobby.case'){need(p.id===r.hostId,'Only the host can select a case.','FORBIDDEN');need(!r.round,'Choose a case in the lobby.');r.caseId=a.caseId;r.players.forEach(player=>player.ready=!!player.bot);}
     else if(c.type==='round.start'){
-      need(p.id===r.hostId,'Only the mission host can start.','FORBIDDEN');need(!r.round,'Mission already started.');need(r.players.length>=(r.mode==='coop'?2:3),'More agents are needed.');need(r.players.every(p=>p.connected&&p.ready),'Every agent must be connected and ready.');
-      const ids=r.players.map(p=>p.id),suspects=r.mode==='coop'?['npc-mira','npc-orin','npc-tessa']:ids;const culprit=suspects[randomInt(suspects.length)];
-      const t:Round={id:randomUUID(),phase:'reveal',deadline:now+this.timing.reveal,startedAt:now,investigationAt:0,culprit,roles:Object.fromEntries(ids.map(id=>[id,id===culprit?'traitor':'agent'])),caseId:missionBrief(r.caseId).id,evidence:makeCase(suspects,culprit,ids,r.caseId),links:[],repairs:Object.fromEntries(['repair-clock','repair-uplink','repair-reactor'].map(id=>[id,{step:0,complete:false,jammedUntil:0,lastStepAt:0}])),channels:{},charges:Object.fromEntries([...ids,...(r.mode==='coop'?['npc']:[])].map(id=>[id,id==='npc'?3:ids.length<6?4:5])),cooldowns:{},used:{},jammed:{},votes:{},runoffTargets:[],exfil:null,dossier:false,result:null,timeline:[],pauseAt:null,pauseSpent:0,voteGrace:false,npcNext:45000};
+      need(p.id===r.hostId,'Only the mission host can start.','FORBIDDEN');need(!r.round,'Mission already started.');need(r.players.length>=(r.mode!=='social'?2:3),'More agents are needed.');need(r.players.every(p=>p.connected&&p.ready),'Every agent must be connected and ready.');
+      const ids=r.players.map(p=>p.id),suspects=r.mode!=='social'?['npc-mira','npc-orin','npc-tessa']:ids;const culprit=suspects[randomInt(suspects.length)];
+      const t:Round={id:randomUUID(),phase:'reveal',deadline:now+this.timing.reveal,startedAt:now,investigationAt:0,culprit,roles:Object.fromEntries(ids.map(id=>[id,id===culprit?'traitor':'agent'])),caseId:missionBrief(r.caseId).id,evidence:makeCase(suspects,culprit,ids,r.caseId),links:[],repairs:Object.fromEntries(['repair-clock','repair-uplink','repair-reactor'].map(id=>[id,{step:0,complete:false,jammedUntil:0,lastStepAt:0}])),channels:{},charges:Object.fromEntries([...ids,...(r.mode!=='social'?['npc']:[])].map(id=>[id,id==='npc'?3:ids.length<6?4:5])),cooldowns:{},used:{},jammed:{},votes:{},runoffTargets:[],exfil:null,dossier:false,result:null,timeline:[],pauseAt:null,pauseSpent:0,voteGrace:false,npcNext:45000};
       r.round=t;r.roundNumber++;r.chat=[];this.log(t,'AEGIS entered lockdown. The investigation began.',now);
     }else if(c.type==='round.rematch'){
-      need(p.id===r.hostId,'Only the host can reopen the lobby.');need(r.round?.phase==='results','Finish this mission first.');r.round=null;r.chat=[];r.players=r.players.filter(p=>p.connected);r.players.forEach((p,i)=>{p.ready=false;p.x=-3+i*.8;p.z=3.5;p.route=[];p.dx=0;p.dz=0;});
+      need(p.id===r.hostId,'Only the host can reopen the lobby.');need(r.round?.phase==='results','Finish this mission first.');r.round=null;r.chat=[];r.players=r.players.filter(p=>p.connected);r.players.forEach((p,i)=>{p.ready=!!p.bot;p.botAt=0;p.x=-3+i*.8;p.z=3.5;p.route=[];p.dx=0;p.dz=0;});
+    }else if(c.type==='practice.discuss'){
+      need(r.mode==='practice'&&p.id===r.hostId,'This control is only available in your practice mission.','FORBIDDEN');const t=this.live(r,p,now);need(t.dossier&&['footage','reader'].every(id=>t.evidence.some(e=>e.id===id&&e.verified&&e.sharedBy)),'Authenticate and publish both identifying records, then support both Evidence Wall connections.');t.investigationEndedAt=now;t.phase='discussion';t.deadline=now+15000;t.channels={};r.players.forEach(x=>{x.route=[];x.dx=0;x.dz=0;});this.log(t,'Practice case assembled. Discuss the evidence before voting.',now);
     }else if(c.type==='chat'||c.type==='quick'){
       let text=a.text;if(c.type==='quick') {const reference=r.round?.evidence.find(e=>e.id===a.reference&&e.sharedBy);if(['found','verify','conflict'].includes(a.key))need(reference,'Share the evidence before sending this message.');const label=reference?.title??roomAt(p);text=({found:`Found evidence: ${label}`,verify:`Please verify: ${label}`,help:`Need help in ${roomAt(p)}.`,conflict:`Compare the records: ${label}`,abort:'Abort the upload! Use an emergency console.'} as Record<string,string>)[a.key];}r.chat.push({id:randomUUID(),name:p.name,text,at:now});r.chat=r.chat.slice(-60);
     }else{
@@ -88,7 +92,7 @@ export class Engine {
       if(c.type==='input.move'){need(t.phase==='investigation'&&!t.pauseAt,'Movement is paused.','WRONG_PHASE');if(a.x||a.z)p.route=[];p.dx=a.x;p.dz=a.z;p.inputAt=now;return r;}
       if(c.type==='move.to'||c.type==='move.cancel'){this.live(r,p,now);if(c.type==='move.cancel'){p.route=[];p.dx=0;p.dz=0;}else{need(walkable(a)||STATIONS.some(s=>distance(s,a)<=1.1),'Choose a destination on the facility floor.','INVALID_DESTINATION');const route=pathTo(p,a);need(route.length,'No clear route reaches that destination.','INVALID_DESTINATION');p.route=route;p.dx=0;p.dz=0;delete t.channels[p.id];}return r;}
       if(c.type==='vote'){
-        need(['vote','runoff'].includes(t.phase)&&now<t.deadline,'Voting is closed.');const ids=r.mode==='coop'?['npc-mira','npc-orin','npc-tessa']:r.players.map(p=>p.id);
+        need(['vote','runoff'].includes(t.phase)&&now<t.deadline,'Voting is closed.');const ids=r.mode!=='social'?['npc-mira','npc-orin','npc-tessa']:r.players.map(p=>p.id);
         if(a.target!==null){need(ids.includes(a.target),'Invalid suspect.');if(t.phase==='runoff')need(t.runoffTargets.includes(a.target),'Choose a runoff candidate.');need(t.evidence.some(e=>e.id===a.evidence&&e.sharedBy),'Attach a published record from the Evidence Wall.');}
         t.votes[p.id]={target:a.target,evidence:a.evidence};
       }else {
@@ -127,23 +131,24 @@ export class Engine {
     }
     r.updatedAt=now;return r;
   }
-  finish(r:Room,winner:ResultView['winner'],reason:string,now:number){const t=r.round!;t.phase='results';t.deadline=now;t.channels={};t.exfil=null;t.pauseAt=null;t.result={winner,reason,culprit:t.culprit,roles:r.players.map(p=>({id:p.id,role:t.roles[p.id]})),forged:t.evidence.filter(e=>e.forged).map(e=>e.id),audit:t.evidence.map(e=>clueView({...e,verified:true})),timeline:[...t.timeline],metrics:{caseId:missionBrief(t.caseId).id,mode:r.mode,playerCount:r.players.length,investigationSeconds:Math.round(this.elapsed(t,t.investigationEndedAt??now)/1000),sharedRecords:t.evidence.filter(e=>e.sharedBy).length,authenticatedRecords:t.evidence.filter(e=>e.verified).length,supportedConnections:t.links.length,completedRepairs:Object.values(t.repairs).filter(x=>x.complete).length,forgeriesExposed:t.evidence.filter(e=>e.forged&&e.verified).length,sabotageActions:Object.values(t.used).reduce((sum,actions)=>sum+actions.length,0),uploadAttempts:t.timeline.filter(x=>x.text.startsWith('EXFILTRATION DETECTED')).length,uploadsAborted:t.timeline.filter(x=>x.text.includes('stopped the exfiltration')).length,sharedRecoveryCopies:t.timeline.filter(x=>x.text.startsWith('Recovery copy published:')).length,contributions:r.players.map((p,seat)=>({seat:seat+1,role:t.roles[p.id],recovered:t.evidence.filter(e=>e.discoveredBy.includes(p.id)).length,published:t.evidence.filter(e=>e.sharedBy===p.id).length}))}};for(const p of r.players){p.route=[];p.dx=0;p.dz=0;if(winner==='draw')p.score+=25;else if((winner==='agents'&&t.roles[p.id]==='agent')||(winner==='traitor'&&t.roles[p.id]==='traitor'))p.score+=100;}r.updatedAt=now;}
+  finish(r:Room,winner:ResultView['winner'],reason:string,now:number){const t=r.round!;t.phase='results';t.deadline=now;t.channels={};t.exfil=null;t.pauseAt=null;t.result={winner,reason,culprit:t.culprit,roles:r.players.map(p=>({id:p.id,role:t.roles[p.id]})),forged:t.evidence.filter(e=>e.forged).map(e=>e.id),audit:t.evidence.map(e=>clueView({...e,verified:true})),timeline:[...t.timeline],metrics:{caseId:missionBrief(t.caseId).id,mode:r.mode,playerCount:r.players.length,investigationSeconds:Math.round(this.elapsed(t,t.investigationEndedAt??now)/1000),sharedRecords:t.evidence.filter(e=>e.sharedBy).length,authenticatedRecords:t.evidence.filter(e=>e.verified).length,supportedConnections:t.links.length,completedRepairs:Object.values(t.repairs).filter(x=>x.complete).length,forgeriesExposed:t.evidence.filter(e=>e.forged&&e.verified).length,sabotageActions:Object.values(t.used).reduce((sum,actions)=>sum+actions.length,0),uploadAttempts:t.timeline.filter(x=>x.text.startsWith('EXFILTRATION DETECTED')).length,uploadsAborted:t.timeline.filter(x=>x.text.includes('stopped the exfiltration')).length,sharedRecoveryCopies:t.timeline.filter(x=>x.text.startsWith('Recovery copy published:')).length,contributions:r.players.map((p,seat)=>({seat:seat+1,role:t.roles[p.id],recovered:t.evidence.filter(e=>e.discoveredBy.includes(p.id)).length,published:t.evidence.filter(e=>e.sharedBy===p.id).length}))}};for(const p of r.players){p.route=[];p.dx=0;p.dz=0;if(r.mode==='practice')continue;if(winner==='draw')p.score+=25;else if((winner==='agents'&&t.roles[p.id]==='agent')||(winner==='traitor'&&t.roles[p.id]==='traitor'))p.score+=100;}r.updatedAt=now;}
   tally(r:Room,now:number){const t=r.round!;const ballots=Object.values(t.votes);const counts:Record<string,number>={};for(const b of ballots)if(b.target)counts[b.target]=(counts[b.target]??0)+1;const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const top=sorted[0];const valid=ballots.length>=this.quorum(r)&&top&&top[1]>=2&&(!sorted[1]||top[1]>sorted[1][1]);
     if(valid){this.finish(r,top[0]===t.culprit?'agents':'traitor',top[0]===t.culprit?'The evidence held. The double agent has been exposed.':'The wrong operative was indicted. The double agent escaped.',now);return;}
-    if(t.phase==='vote'){t.phase='runoff';t.deadline=now+this.timing.runoff;t.votes={};t.runoffTargets=top&&sorted.filter(x=>x[1]===top[1]).length>1?sorted.filter(x=>x[1]===top[1]).map(x=>x[0]):r.mode==='coop'?['npc-mira','npc-orin','npc-tessa']:r.players.map(p=>p.id);return;}
+    if(t.phase==='vote'){t.phase='runoff';t.deadline=now+this.timing.runoff;t.votes={};t.runoffTargets=top&&sorted.filter(x=>x[1]===top[1]).length>1?sorted.filter(x=>x[1]===top[1]).map(x=>x[0]):r.mode!=='social'?['npc-mira','npc-orin','npc-tessa']:r.players.map(p=>p.id);return;}
     const contained=Object.values(t.repairs).filter(x=>x.complete).length>=2;this.finish(r,contained?'draw':'traitor',contained?'The intelligence is secure, but the accusation remained unproven.':'No indictment. The double agent escaped with the intelligence.',now);
   }
   tick(now=Date.now(),dt=.05):boolean {
     let dirty=false;
     for(const r of this.rooms.values()){
       if(now-r.updatedAt>1800000&&!r.players.some(p=>p.connected)){this.rooms.delete(r.code);dirty=true;continue;}
-      const host=r.players.find(p=>p.id===r.hostId);if(host&&!host.connected&&now-host.lastSeen>=15000){const next=r.players.find(p=>p.connected);if(next){r.hostId=next.id;dirty=true;}}
+      const host=r.players.find(p=>p.id===r.hostId);if(host&&!host.connected&&now-host.lastSeen>=15000){const next=r.players.find(p=>p.connected&&!p.bot);if(next){r.hostId=next.id;dirty=true;}}
       const t=r.round;if(!t||t.phase==='results')continue;
       const connected=r.players.filter(p=>p.connected).length;
       if(t.phase==='investigation'&&connected<this.quorum(r)){
         if(t.pauseAt===null){t.pauseAt=now;dirty=true;}if(t.pauseSpent+now-t.pauseAt>=45000){this.finish(r,'none','Too few agents reconnected. No score awarded.',now);dirty=true;}continue;
       }
       if(t.pauseAt!==null){const pause=now-t.pauseAt;t.pauseSpent+=pause;t.deadline+=pause;t.investigationAt+=pause;for(const c of Object.values(t.channels))c.endsAt+=pause;if(t.exfil)t.exfil.endsAt+=pause;t.pauseAt=null;dirty=true;}
+      if(r.mode==='practice'&&r.players.some(p=>!p.bot&&p.connected))this.practiceBot(r,now);
       if(t.phase==='investigation'){
         for(const p of r.players){
           let dx=p.dx,dz=p.dz;
@@ -155,7 +160,7 @@ export class Engine {
           const q=move(p,dx,dz,dt);p.x=q.x;p.z=q.z;
           const c=t.channels[p.id];if(c){const station=STATIONS.find(s=>s.id===c.station)!;if(!p.connected||distance(p,station)>2.65){delete t.channels[p.id];dirty=true;continue;}if(now>=c.endsAt){delete t.channels[p.id];dirty=true;this.completeChannel(r,p,c,now);}}
         }
-        if(r.mode==='coop'&&this.elapsed(t,now)>=t.npcNext){
+        if(r.mode!=='social'&&this.elapsed(t,now)>=t.npcNext){
           if(t.npcNext<180000){const e=t.evidence.find(e=>e.id==='footage')!;if(!e.verified&&!e.forged){e.observed=caseTruth(t.caseId).exported;e.forged=true;this.log(t,'A source export was modified.',now);}else t.jammed['verify-a']=now+10000;t.npcNext=180000;}
           else {if(!t.repairs['repair-uplink'].complete&&Object.values(t.repairs).filter(x=>x.complete).length<2){t.exfil={endsAt:now+this.timing.exfil};this.log(t,'EXFILTRATION DETECTED. The NPC saboteur opened the uplink.',now);}t.npcNext=Number.MAX_SAFE_INTEGER;}dirty=true;
         }
@@ -171,6 +176,30 @@ export class Engine {
       }
     }return dirty;
   }
+  practiceBot(r:Room,now:number){
+    const bot=r.players.find(p=>p.bot),t=r.round;if(!bot||!t||now-(bot.botAt??0)<500)return;bot.botAt=now;
+    const act=(type:string,payload:Record<string,unknown>={})=>this.command(bot.session,{id:randomUUID(),type,payload,roundId:t.id},now);
+    // The companion uses only its assigned/discovered records and the published wall.
+    // It never reads the culprit or solves from an unrecovered canonical source.
+    if(t.phase==='vote'||t.phase==='runoff'){
+      if(t.votes[bot.id])return;
+      const camera=t.evidence.find(e=>e.id==='footage'&&e.sharedBy&&e.verified),reader=t.evidence.find(e=>e.id==='reader'&&e.sharedBy&&e.verified);
+      const candidates=camera&&reader?camera.candidates?.filter(id=>reader.candidates?.includes(id))??[]:[];
+      if(candidates.length===1&&(t.phase!=='runoff'||t.runoffTargets.includes(candidates[0])))act('vote',{target:candidates[0],evidence:'footage'});
+      else act('vote',{target:null});return;
+    }
+    if(t.phase!=='investigation'||t.pauseAt||t.channels[bot.id])return;
+    const record=t.evidence.find(e=>e.grantedTo===bot.id&&(!e.discoveredBy.includes(bot.id)||!e.verified||!e.sharedBy));
+    let station='board',type='',payload:Record<string,unknown>={};
+    if(record){
+      if(!record.discoveredBy.includes(bot.id)){station=record.id;type='interact';payload={station};}
+      else if(!record.verified){station=(t.jammed['verify-b']??0)>now?'verify-a':'verify-b';if((t.jammed[station]??0)>now)return;type='interact';payload={station,evidence:record.id};}
+      else {type='evidence.share';payload={evidence:record.id};}
+    }
+    const target=STATIONS.find(s=>s.id===station)!;
+    if(distance(bot,target)>2.65){if(!bot.route?.length)act('move.to',{x:target.x,z:target.z+.8});return;}
+    if(type){try{act(type,payload);}catch(err){if(!(err instanceof GameError))throw err;}}
+  }
   completeChannel(r:Room,p:Player,c:Channel,now:number){const t=r.round!;
     if(c.kind==='scan'){const e=t.evidence.find(e=>e.id===c.target)!;if(!e.discoveredBy.includes(p.id))e.discoveredBy.push(p.id);if(this.elapsed(t,now)>=this.timing.escrow&&!e.sharedBy){e.sharedBy=p.id;this.log(t,`Recovery copy published: ${e.title}.`,now);}}
     else if(c.kind==='verify'){if((t.jammed[c.station]??0)>now)return;const e=t.evidence.find(e=>e.id===c.target)!;e.verified=true;this.log(t,`${p.name} verified ${e.title}${e.forged?' and exposed a forged export':''}.`,now);}
@@ -185,7 +214,7 @@ export class Engine {
     }
   }
   snapshot(session:string,now=Date.now()):Snapshot {const r=this.locate(session);if(!r)return{type:'snapshot',room:null,self:null,serverTime:now};const p=this.member(r,session),t=r.round;
-    return {type:'snapshot',serverTime:now,room:{mission:missionBrief(t?.caseId??r.caseId),code:r.code,mode:r.mode,hostId:r.hostId,phase:t?.phase??'lobby',roundId:t?.id??null,deadline:t?.deadline??null,serverTime:now,players:r.players.map(({id,name,color,ready,connected,score,x,z})=>({id,name,color,ready,connected,score,x,z,room:roomAt({x,z})})),suspects:r.mode==='coop'?[{id:'npc-mira',name:'Mira Voss'},{id:'npc-orin',name:'Orin Vale'},{id:'npc-tessa',name:'Tessa Rook'}]:r.players.map(({id,name})=>({id,name})),board:t?.evidence.filter(e=>e.sharedBy).map(clueView)??[],links:t?.links??[],repairs:t?Object.fromEntries(Object.entries(t.repairs).map(([k,v])=>[k,{step:v.step,complete:v.complete,jammedUntil:v.jammedUntil}])):{},jammed:t?.jammed??{},chat:r.chat,exfil:t?.exfil??null,elapsed:t?this.elapsed(t,now):0,paused:t?.pauseAt!==null&&t?.pauseAt!==undefined,pauseRemaining:t?.pauseAt?Math.max(0,45000-t.pauseSpent-(now-t.pauseAt)):45000,dossier:t?.dossier??false,result:t?.result??null,roundNumber:r.roundNumber,ruleHint:'Indict the culprit using a published record. Repair systems to contain the breach.',runoffTargets:t?.runoffTargets??[]},self:{id:p.id,role:t?.roles[p.id]??null,clues:t?.evidence.filter(e=>e.discoveredBy.includes(p.id)).map(clueView)??[],grants:t?.evidence.filter(e=>e.grantedTo===p.id).map(e=>e.id)??[],charges:t?.roles[p.id]==='traitor'?t.charges[p.id]:0,cooldownUntil:t?.cooldowns[p.id]??0,channel:t?.channels[p.id]?{kind:t.channels[p.id].kind,target:t.channels[p.id].target,endsAt:t.channels[p.id].endsAt}:null,vote:t?.votes[p.id]?.target??null,voteSubmitted:!!t?.votes[p.id],abilitiesUsed:t?.roles[p.id]==='traitor'?t.used[p.id]??[]:[]}};
+    return {type:'snapshot',serverTime:now,room:{mission:missionBrief(t?.caseId??r.caseId),code:r.code,mode:r.mode,hostId:r.hostId,phase:t?.phase??'lobby',roundId:t?.id??null,deadline:t?.deadline??null,serverTime:now,players:r.players.map(({id,name,color,ready,connected,score,x,z,bot})=>({id,name,color,ready,connected,score,x,z,room:roomAt({x,z}),...(bot?{bot:true}:{})})),suspects:r.mode!=='social'?[{id:'npc-mira',name:'Mira Voss'},{id:'npc-orin',name:'Orin Vale'},{id:'npc-tessa',name:'Tessa Rook'}]:r.players.map(({id,name})=>({id,name})),board:t?.evidence.filter(e=>e.sharedBy).map(clueView)??[],links:t?.links??[],repairs:t?Object.fromEntries(Object.entries(t.repairs).map(([k,v])=>[k,{step:v.step,complete:v.complete,jammedUntil:v.jammedUntil}])):{},jammed:t?.jammed??{},chat:r.chat,exfil:t?.exfil??null,elapsed:t?this.elapsed(t,now):0,paused:t?.pauseAt!==null&&t?.pauseAt!==undefined,pauseRemaining:t?.pauseAt?Math.max(0,45000-t.pauseSpent-(now-t.pauseAt)):45000,dossier:t?.dossier??false,result:t?.result??null,roundNumber:r.roundNumber,ruleHint:'Indict the culprit using a published record. Repair systems to contain the breach.',runoffTargets:t?.runoffTargets??[]},self:{id:p.id,role:t?.roles[p.id]??null,clues:t?.evidence.filter(e=>e.discoveredBy.includes(p.id)).map(clueView)??[],grants:t?.evidence.filter(e=>e.grantedTo===p.id).map(e=>e.id)??[],charges:t?.roles[p.id]==='traitor'?t.charges[p.id]:0,cooldownUntil:t?.cooldowns[p.id]??0,channel:t?.channels[p.id]?{kind:t.channels[p.id].kind,target:t.channels[p.id].target,endsAt:t.channels[p.id].endsAt}:null,vote:t?.votes[p.id]?.target??null,voteSubmitted:!!t?.votes[p.id],abilitiesUsed:t?.roles[p.id]==='traitor'?t.used[p.id]??[]:[]}};
   }
 }
 

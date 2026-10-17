@@ -43,13 +43,17 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Rules and persistence
         run: npm test
+      - name: Independent guest transport and scoped seats
+        run: npm run test:network
       - name: Production build
         run: npm run build
       - name: Public API readiness
         run: |
-          node -e "fetch(process.env.BASE_URL+'/health/ready').then(async r=>{const v=await r.json();console.log(JSON.stringify({event:'public-health',status:r.status,...v}));if(!r.ok||v.version!=='b2-five-cases')process.exitCode=1;})"
+          node -e "const pause=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let n=0;n<60;n++){try{const r=await fetch(process.env.BASE_URL+'/health/ready');const v=await r.json();if(r.ok&&v.version==='b3-practice-seats'){console.log(JSON.stringify({event:'public-health',status:r.status,...v}));return;}}catch{}await pause(3000);}throw Error('Expected deployment did not become ready');})().catch(e=>{console.error(e.message);process.exitCode=1;})"
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Solo practice and single-browser reviewer flow
+        run: node tests/live/reviewer.cjs
       - name: Live social security and reconnect
         id: security
         run: node tests/live/security.cjs

@@ -16,6 +16,7 @@ No installation, account registration, or email is required.
 
 | Mode | Players | Objective |
 | --- | --- | --- |
+| Solo practice | 1 human + ATLAS bot | Learn the complete investigation, wall, voting, and rematch loop. |
 | Cooperative investigation | 2 | Work together to expose an NPC saboteur. Recommended for a first review. |
 | Social deduction | 3–8 | Investigate alongside one hidden human traitor. |
 
@@ -28,7 +29,11 @@ A complete mission takes approximately six minutes.
 5. Read your private role, follow the investigation prompts, and compare findings with your team.
 6. After the result, use the rematch control to play again in the same room.
 
-**Reviewing on one computer?** Use separate browser profiles or different browsers for each player. Tabs in the same profile share a guest identity and cannot act as separate players. Two devices also work.
+**Reviewing alone?** Choose **Practice with bot** from the menu. ATLAS is explicitly labeled as a server-controlled companion: it walks to terminals, authenticates its assigned records, publishes them, and votes from the authenticated Evidence Wall. You still investigate your own records and support the connections. Once both connections are complete, the wall can open discussion early. Practice awards no XP.
+
+**Reviewing on one computer with two people?** Choose **New player in another tab** in the lobby. It opens a separate guest seat and pre-fills the room code without replacing the first player. Reloading that tab restores its seat. Separate profiles, private windows, and different devices also work.
+
+You can edit your callsign in the join dialog or save a new callsign in the lobby before a round. Empty multiplayer lobbies retain their invite for 30 minutes after the last guest leaves.
 
 The menu's **Mission briefing** introduces the essentials. Sound and graphics controls are available in **Settings**.
 

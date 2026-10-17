@@ -1,9 +1,9 @@
 import type { Point } from './world.js';
 import type { MissionBrief } from './missions.js';
 export type Phase='lobby'|'reveal'|'investigation'|'discussion'|'vote'|'runoff'|'results';
-export type Mode='social'|'coop';
+export type Mode='social'|'coop'|'practice';
 export type Role='agent'|'traitor';
-export interface PlayerView extends Point { id:string; name:string; color:string; ready:boolean; connected:boolean; room:string; score:number }
+export interface PlayerView extends Point { id:string; name:string; color:string; ready:boolean; connected:boolean; room:string; score:number; bot?:boolean }
 export interface ClueView { id:string; title:string; summary:string; kind:string; value:string; candidates?:string[]; verified:boolean; discrepancy?:string; sharedBy?:string; originalValue?:string }
 export interface LinkView { id:string; from:string; to:string; label:string; explanation:string; author:string }
 export interface ChannelView { kind:string; target:string; endsAt:number }

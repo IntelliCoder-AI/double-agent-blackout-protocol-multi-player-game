@@ -6,6 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { z } from 'zod';
 import { Engine, GameError } from './engine.js';
 import { Store } from './store.js';
+import { seatCookie, validSeat } from '../shared/seat.js';
 import type { Command } from '../shared/types.js';
 
 export async function startServer(options:{port?:number;origin?:string;databaseUrl?:string;production?:boolean;engine?:Engine;frontend?:boolean}={}){
@@ -17,8 +18,8 @@ export async function startServer(options:{port?:number;origin?:string;databaseU
  if(production&&!databaseUrl.startsWith('postgres'))throw Error('Production requires a dedicated PostgreSQL service. Embedded storage is for development/tests only.');
  const store=new Store(databaseUrl);
  if(!production)await store.migrate();await store.check();await store.claimOwnership();const engine=options.engine??new Engine();
- for(const room of await store.load()){room.players.forEach(p=>{p.connected=false;p.lastSeen=Date.now();p.dx=0;p.dz=0;});if(room.round&&room.round.phase!=='results')engine.finish(room,'none','The server restarted during this mission. Your room and scores are safe; start a rematch.',Date.now());engine.rooms.set(room.code,room);}
- const cookieName=production?'__Host-doubleagent':'doubleagent';const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
+ for(const room of await store.load()){room.players.forEach(p=>{p.connected=!!p.bot;p.lastSeen=Date.now();p.dx=0;p.dz=0;});if(room.round&&room.round.phase!=='results')engine.finish(room,'none','The server restarted during this mission. Your room and scores are safe; start a rematch.',Date.now());engine.rooms.set(room.code,room);}
+ const cookieFor=(value:unknown)=>{if(value!==undefined&&value!==null&&(typeof value!=='string'||!validSeat(value)))throw Error('Invalid player seat.');return seatCookie(production,value as string|undefined);};const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
  const cookies=(req:IncomingMessage)=>Object.fromEntries((req.headers.cookie??'').split(';').map(x=>{const i=x.indexOf('=');return[x.slice(0,i).trim(),x.slice(i+1)];}));
  const buckets=new Map<string,{tokens:number;at:number}>();const rate=(key:string,limit:number,period:number)=>{const now=Date.now();const b=buckets.get(key)??{tokens:limit,at:now};b.tokens=Math.min(limit,b.tokens+(now-b.at)*limit/period);b.at=now;if(b.tokens<1){buckets.set(key,b);return false;}b.tokens--;buckets.set(key,b);return true;};
  let stopping=false,dbHealthy=true,processing=false;let queue=Promise.resolve();const serialize=(f:()=>Promise<void>)=>{queue=queue.then(async()=>{processing=true;try{await f();}finally{processing=false;}}).catch(e=>console.error('Operation failed:',e instanceof Error?e.message:'unknown'));return queue;};
@@ -32,8 +33,9 @@ export async function startServer(options:{port?:number;origin?:string;databaseU
    if(req.url==='/health/ready'){try{await store.check();return send(stopping?503:200,{ok:!stopping});}catch{return send(503,{ok:false});}}
    if(req.url==='/api/session'&&req.method==='POST'){
     if(req.headers.origin!==origin)return send(403,{error:'Origin rejected.'});
+    if(req.headers['x-player-seat']!==undefined&&(typeof req.headers['x-player-seat']!=='string'||!validSeat(req.headers['x-player-seat'])))return send(400,{error:'Invalid player seat.'});
     if(!rate('session:'+req.socket.remoteAddress,60,60000))return send(429,{error:'Please wait before reconnecting.'});
-    return void serialize(async()=>{try{const token=cookies(req)[cookieName];const existing=token?await store.session(hash(token)):undefined;
+    return void serialize(async()=>{try{const cookieName=cookieFor(req.headers['x-player-seat']);const token=cookies(req)[cookieName];const existing=token?await store.session(hash(token)):undefined;
       if(existing)return send(200,{ok:true});const fresh=randomBytes(32).toString('base64url');await store.newSession(randomUUID(),hash(fresh));
       res.setHeader('Set-Cookie',`${cookieName}=${fresh}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${production?'; Secure':''}`);send(200,{ok:true});
     }catch{send(503,{error:'Guest session unavailable. Please retry.'});}});
@@ -58,7 +60,7 @@ export async function startServer(options:{port?:number;origin?:string;databaseU
   if((req.url??'').split('?')[0]!=='/ws'){if(!vite)socket.destroy();return;}
   socket.on('error',()=>{});
   try{if(stopping||!dbHealthy||req.headers.origin!==origin||!rate('upgrade:'+req.socket.remoteAddress,120,60000)){socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');socket.destroy();return;}
-   const token=cookies(req)[cookieName],session=token?await store.session(hash(token)):undefined;if(!session){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
+   const cookieName=cookieFor(new URL(req.url??'/ws',origin).searchParams.get('seat'));const token=cookies(req)[cookieName],session=token?await store.session(hash(token)):undefined;if(!session){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
    wss.handleUpgrade(req,socket,head,ws=>{let queued=0;const old=clients.get(session.id);clients.set(session.id,ws);if(old)old.close(4001,'This session opened another connection.');alive.set(ws,Date.now());void serialize(async()=>{if(clients.get(session.id)===ws){engine.connected(session.id,true);safeSend(ws,engine.snapshot(session.id));}});
     ws.on('error',()=>{});ws.on('pong',()=>alive.set(ws,Date.now()));
     ws.on('close',()=>{void serialize(async()=>{if(clients.get(session.id)===ws){clients.delete(session.id);engine.connected(session.id,false);broadcast();}});});

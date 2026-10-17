@@ -14,7 +14,7 @@ REVOKE ALL ON game_private.hosted_world, game_private.hosted_sessions, game_priv
 interface World {rooms:Room[];leases:Record<string,{controller:string;seen:number}>;buckets:Record<string,{tokens:number;at:number}>;tick:number;cleanup:number}
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const commandSchema=z.object({id:z.uuid(),type:z.string().max(40),roundId:z.string().nullable().optional(),payload:z.record(z.string(),z.unknown()).optional()}).strict();
-export const requestSchema=z.object({controller:z.uuid(),claim:z.boolean().optional(),command:commandSchema.optional()}).strict();
+export const requestSchema=z.object({controller:z.uuid(),claim:z.boolean().optional(),heartbeat:z.boolean().optional(),command:commandSchema.optional()}).strict();
 type RequestData=z.infer<typeof requestSchema>;
 export class HostedGame {
  constructor(private pool:Pool,private makeEngine=()=>new Engine(undefined,1000)){}
@@ -40,7 +40,7 @@ export class HostedGame {
   const fresh=randomBytes(32).toString('base64url');await c.query("INSERT INTO game_private.hosted_sessions VALUES($1,$2,now()+interval '24 hours')",[hash(fresh),randomUUID()]);return {created:true,token:fresh};
  });}
  private advance(w:World,e:Engine,now:number){
-  for(const r of e.rooms.values())for(const p of r.players){const lease=w.leases[p.session];const connected=!!lease&&now-lease.seen<15000;if(p.connected!==connected)e.connected(p.session,connected,lease?.seen??now);}
+  for(const r of e.rooms.values())for(const p of r.players){if(p.bot)continue;const lease=w.leases[p.session];const grace=r.round&&r.round.phase!=='results'?15000:45000;const connected=!!lease&&now-lease.seen<grace;if(p.connected!==connected)e.connected(p.session,connected,lease?.seen??now);}
   // Integrate bounded movement in small steps; never let several instances advance the same time twice.
   if(!w.tick)w.tick=now;const end=Math.min(now,w.tick+500);
   while(w.tick+50<=end){w.tick+=50;e.tick(w.tick,.05);}
@@ -51,7 +51,7 @@ export class HostedGame {
   const session=(await c.query('SELECT id FROM game_private.hosted_sessions WHERE token_hash=$1 AND expires_at>now()',[hash(token)])).rows[0];
   if(!session)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');const sid:string=session.id;
   if(!this.rate(w,sid+':ingress',24,1000,now))return {type:'error',id:data.command?.id,code:'RATE_LIMIT',message:'Please slow down.'};
-  const lease=w.leases[sid];if(lease&&lease.controller!==data.controller&&!data.claim)return {type:'error',code:'SESSION_REPLACED',message:'This guest session is open in another tab. Use another browser profile for a second player.'};
+  const lease=w.leases[sid];if(lease&&lease.controller!==data.controller&&!data.claim)return {type:'error',code:'SESSION_REPLACED',message:'This guest session is open in another tab. Choose New player in another tab for a separate seat.'};
   this.advance(w,e,now);w.leases[sid]={controller:data.controller,seen:now};const room=e.locate(sid);if(room&&!e.member(room,sid).connected)e.connected(sid,true,now);
   let response:unknown=null;const cmd=data.command as Command|undefined;
   if(cmd){try{
@@ -69,14 +69,14 @@ export class HostedGame {
    }
   }catch(err){if(!(err instanceof GameError))throw err;response={type:'error',id:cmd.id,code:err.code,message:err.message};}}
   return {snapshot:e.snapshot(sid,now),response};
- },!data.claim&&(!data.command||(data.command.type==='input.move'&&!!(data.command.payload?.x||data.command.payload?.z)))?async(c,w,e,now)=>{
+ },!data.claim&&!data.heartbeat&&(!data.command||(data.command.type==='input.move'&&!!(data.command.payload?.x||data.command.payload?.z)))?async(c,w,e,now)=>{
   // Transient snapshots/input packets must not queue behind a world writer.
   // Privileged commands, stop packets and controller claims always take the authoritative lock.
   if(!token||token.length!==43)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');
   const identity=(await c.query('SELECT id FROM game_private.hosted_sessions WHERE token_hash=$1 AND expires_at>now()',[hash(token)])).rows[0];
   if(!identity)throw new GameError('SESSION_EXPIRED','Reload to establish a guest session.');
   const sid:string=identity.id,lease=w.leases[sid];
-  if(!lease||lease.controller!==data.controller)return {type:'error',code:'SESSION_REPLACED',message:'This guest session is open in another tab. Use another browser profile for a second player.'};
+  if(!lease||lease.controller!==data.controller)return {type:'error',code:'SESSION_REPLACED',message:'This guest session is open in another tab. Choose New player in another tab for a separate seat.'};
   let response:unknown=null;
   if(data.command){try{e.command(sid,data.command as Command,now);response={type:'ack',id:data.command.id,coalesced:true};}catch(err){if(!(err instanceof GameError))throw err;response={type:'error',id:data.command.id,code:err.code,message:err.message};}}
   return {snapshot:e.snapshot(sid,now),response};
