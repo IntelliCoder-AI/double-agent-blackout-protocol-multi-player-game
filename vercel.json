@@ -49,6 +49,17 @@
   ],
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "double-agent-blackout-protocol.vercel.app"
+        }
+      ],
+      "destination": "https://double-agent-blackout-protocol-radhe12.vercel.app/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [
         {
