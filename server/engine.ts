@@ -60,7 +60,7 @@ export class Engine {
       if(c.type==='room.create'){
         // Preserve disconnected guests' debriefs for reconnect, without letting
         // completed, empty missions occupy every playable room slot.
-        const occupied=[...this.rooms.values()].filter(room=>room.players.some(p=>p.connected)||(room.round&&room.round.phase!=='results'));
+        const occupied=[...this.rooms.values()].filter(room=>room.players.some(p=>p.connected&&!p.bot)||(room.round&&room.round.phase!=='results'));
         need(occupied.length<Number(process.env.MAX_ACTIVE_ROOMS??5)&&this.rooms.size<100,'Headquarters is at capacity. Try again shortly.','CAPACITY');
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';do{code=Array.from(randomBytes(6),b=>alphabet[b%32]).join('');}while(this.rooms.has(code));
         r={code,mode:a.mode,hostId:'',players:[],round:null,chat:[],roundNumber:0,createdAt:now,updatedAt:now};this.rooms.set(code,r);
@@ -140,7 +140,7 @@ export class Engine {
   tick(now=Date.now(),dt=.05):boolean {
     let dirty=false;
     for(const r of this.rooms.values()){
-      if(now-r.updatedAt>1800000&&!r.players.some(p=>p.connected)){this.rooms.delete(r.code);dirty=true;continue;}
+      if(now-r.updatedAt>1800000&&!r.players.some(p=>p.connected&&!p.bot)){this.rooms.delete(r.code);dirty=true;continue;}
       const host=r.players.find(p=>p.id===r.hostId);if(host&&!host.connected&&now-host.lastSeen>=15000){const next=r.players.find(p=>p.connected&&!p.bot);if(next){r.hostId=next.id;dirty=true;}}
       const t=r.round;if(!t||t.phase==='results')continue;
       const connected=r.players.filter(p=>p.connected).length;

@@ -25,3 +25,5 @@
 .practice-entry{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}.practice-entry small{color:var(--muted);font-size:11px;max-width:160px}.callsign-editor{display:flex;align-items:end;gap:8px;margin:16px 0}.callsign-editor label{flex:1;min-width:0}.callsign-editor input{margin-bottom:0}.callsign-editor button{white-space:nowrap;padding:12px}.practice-help{margin-top:12px;border-top:1px solid #ffffff20;padding-top:8px}.practice-help p{font-size:11px;line-height:1.6;color:#a2bdb4}.lobby-footer{flex-wrap:wrap}.landing-copy>.text-button{margin-right:12px}@media(max-width:700px){.practice-entry{margin-top:10px}.callsign-editor{flex-wrap:wrap}.practice-help p{font-size:10px}.quality-low .landing-specs{margin-top:14px}}
 
 .landing{overflow-y:auto;overflow-x:hidden;pointer-events:auto}.landing-copy{padding-bottom:75px}.objectives>div.practice-help{display:block}.callsign-editor label{margin:0}.lobby-footer .text-button{font-size:10px}
+
+.landing-copy>.text-button{display:inline-flex;margin-right:16px}@media(max-height:850px){.landing .build-label{display:none}}

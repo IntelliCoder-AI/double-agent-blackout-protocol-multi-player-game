@@ -68,3 +68,9 @@ test('seat namespaces validate UUIDs and never substitute for guest credentials'
  for(const bad of ['../a','a; token=x','',undefined])assert.equal(validSeat(bad),false);
  assert.throws(()=>seatCookie(true,'not-a-uuid'));
 });
+
+test('abandoned bot lobbies neither consume human capacity nor prevent room expiry',()=>{
+ const e=new Engine(),now=1000000;
+ for(let n=0;n<6;n++){const sid=randomUUID();e.command(sid,{id:randomUUID(),type:'room.create',payload:{name:'Practice '+n,mode:'practice'}},now);const r=e.locate(sid)!;e.connected(sid,false,now);assert.ok(r.players.find(p=>p.bot)!.connected);}
+ assert.equal(e.rooms.size,6);e.tick(now+1800001);assert.equal(e.rooms.size,0);
+});

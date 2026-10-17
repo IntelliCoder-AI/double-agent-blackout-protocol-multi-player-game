@@ -8,7 +8,7 @@ async function until(fn,label,ms=30000){const end=Date.now()+ms;while(Date.now()
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader'],executablePath:process.env.CHROME_EXECUTABLE||undefined});
  const errors=[],clients=[];const context=await browser.newContext({viewport:{width:1280,height:800}});
- await context.addInitScript(()=>{localStorage.setItem('aegis-quality','low');localStorage.setItem('aegis-audio','off');});
+ await context.addInitScript(expected=>{if(location.origin!==expected)return;localStorage.setItem('aegis-quality','low');localStorage.setItem('aegis-audio','off');},new URL(origin).origin);
  function observe(page){const c={page,snap:null,botPositions:new Set()};clients.push(c);page.setDefaultTimeout(30000);page.on('pageerror',e=>errors.push(e.message));page.on('response',async r=>{if(new URL(r.url()).pathname==='/api/sync')try{const d=await r.json();if(d.snapshot){c.snap=d.snapshot;const bot=c.snap.room?.players.find(p=>p.bot);if(bot)c.botPositions.add(bot.x.toFixed(1)+','+bot.z.toFixed(1));}}catch{}});return c;}
  const a=observe(await context.newPage());
  try{
