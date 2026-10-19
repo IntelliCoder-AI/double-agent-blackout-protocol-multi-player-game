@@ -1,0 +1,50 @@
+// Real public UI checks: one human + labeled server bot, then two seats in one browser.
+const {chromium}=require('playwright');
+const {observeSnapshots}=require('../live/observe.cjs');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const origin=process.env.BASE_URL||'https://double-agent-blackout-protocol-radhe12.vercel.app';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const log=(event,data={})=>console.log(JSON.stringify({event,...data}));
+async function until(fn,label,ms=30000){const end=Date.now()+ms;while(Date.now()<end){if(await fn())return;await sleep(250);}throw Error('Timeout: '+label);}
+(async()=>{
+ const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader'],executablePath:process.env.CHROME_EXECUTABLE||undefined});
+ const cases=[{id:'mirror',answer:'B-17',wrong:'71-B',event:'M-718'},{id:'relay',answer:'03:06:00',wrong:'05:06:00',event:'R-209'},{id:'cold',answer:'SEQ-045',wrong:'SEQ-042',event:'C-045'},{id:'midnight',answer:'23:59:10',wrong:'00:00:40',event:'D-999'}];
+ for(const mission of cases){
+ const errors=[],clients=[];const context=await browser.newContext({viewport:{width:1280,height:800}});
+ await context.addInitScript(expected=>{if(location.origin!==expected)return;localStorage.setItem('aegis-quality','low');localStorage.setItem('aegis-audio','off');},new URL(origin).origin);
+ function observe(page){const c={page,snap:null,botPositions:new Set()};clients.push(c);page.setDefaultTimeout(30000);page.on('pageerror',e=>errors.push(e.message));observeSnapshots(page,snapshot=>{c.snap=snapshot;const bot=c.snap.room?.players.find(p=>p.bot);if(bot)c.botPositions.add(bot.x.toFixed(1)+','+bot.z.toFixed(1));});return c;}
+ const a=observe(await context.newPage());await fs.mkdir('extended-evidence',{recursive:true});
+ try{
+  await a.page.goto(origin);await a.page.getByText('SECURE LINK',{exact:true}).waitFor({timeout:60000});await until(async()=>await a.page.locator('canvas').count()&&!(await a.page.getByText('INITIALIZING HEADQUARTERS…',{exact:true}).count()),'first 3D frame');
+  await a.page.getByRole('button',{name:'Practice with bot',exact:true}).click();await a.page.getByLabel('Operative callsign').fill('Solo Reviewer');await a.page.getByRole('button',{name:'Create practice mission',exact:true}).click();
+  await until(()=>a.snap?.room?.mode==='practice','practice lobby');await a.page.getByLabel('Mission case',{exact:true}).selectOption(mission.id);await until(()=>a.snap.room.mission.id===mission.id,'case selection');assert.equal(a.snap.room.players.length,2);assert.equal(a.snap.room.players.filter(p=>p.bot).length,1);
+  await a.page.getByRole('button',{name:'Mark ready',exact:true}).click();await a.page.getByRole('button',{name:'Begin lockdown',exact:true}).click();await until(()=>a.snap.room.phase==='investigation','solo investigation');assert.equal(a.snap.self.role,'agent');
+  const stationNames={footage:'Camera archive',reader:'Vault access log',clock:'Clock receipt',manifest:'Personnel manifest',frame:'Frame signature',event:'Core-bay recorder'};
+  async function dismiss(){const close=a.page.getByRole('button',{name:'Close panel',exact:true});if(await close.count())await close.click();}
+  async function go(name){await dismiss();await a.page.getByRole('button',{name:/Facility/}).click();await a.page.getByRole('button',{name:new RegExp(name)}).click();await a.page.getByRole('heading',{name:new RegExp(name)}).waitFor();const approach=a.page.getByRole('button',{name:'Approach console',exact:true});if(await approach.count())await approach.click();await until(async()=>!(await approach.count()),'arrive '+name,60000);}
+  async function wall(){await dismiss();await a.page.getByRole('button',{name:/Evidence Wall/}).click();const walk=a.page.getByRole('button',{name:'Walk to the wall',exact:true});const picker=a.page.getByLabel('Private record to publish');await until(async()=>await picker.isVisible()||await walk.isVisible(),'wall tools');if(await walk.isVisible()){await walk.click();await until(()=>{const p=a.snap.room.players.find(p=>p.id===a.snap.self.id);return Math.hypot(p.x,p.z+3)<.6;},'wall approach',60000);await a.page.getByRole('button',{name:/Evidence Wall/}).click();await picker.waitFor();}}
+  await go('Isolate uplink');for(const [i,label]of ['○','△','◇'].entries()){await a.page.getByRole('button',{name:label,exact:true}).click();await until(()=>a.snap.room.repairs['repair-uplink'].step>=i+1,'repair step');await sleep(1100);}
+  const grants=[...a.snap.self.grants];
+  for(const id of grants){
+   assert.ok(stationNames[id],'Known station '+id);await go(stationNames[id]);await a.page.getByRole('button',{name:'Recover record',exact:true}).click();await until(()=>a.snap.self.clues.some(c=>c.id===id),'recover '+id);
+   await go('^Verification terminal');
+   for(let n=0;n<3&&!a.snap.self.clues.some(c=>c.id===id&&c.verified);n++){
+    await until(()=>!a.snap.self.channel&&(a.snap.room.jammed['verify-a']??0)<=a.snap.serverTime,'verifier unjammed',20000);await a.page.getByLabel('Evidence to verify').selectOption(id);await a.page.getByRole('button',{name:'Authenticate source',exact:true}).click();try{await until(()=>a.snap.self.clues.some(c=>c.id===id&&c.verified),'authenticate '+id,14000);}catch(e){if(n===2)throw e;}
+   }
+   await wall();if(!a.snap.room.board.some(c=>c.id===id)){await a.page.getByLabel('Private record to publish').selectOption(id);await a.page.getByRole('button',{name:'Pin to wall',exact:true}).click();await until(()=>a.snap.room.board.some(c=>c.id===id),'publish '+id);}
+  }
+  await until(()=>a.snap.room.board.length===6&&a.snap.room.board.every(c=>c.verified),'bot recovered authenticated and published records',100000);assert.ok(a.botPositions.size>10,'Bot must actually move through the facility');
+  await wall();assert.ok(await a.page.getByRole('button',{name:'Discuss the completed case',exact:true}).isDisabled());
+  await a.page.getByLabel('Comparison',{exact:true}).selectOption('time');await a.page.getByLabel('Supporting value',{exact:true}).fill(mission.wrong);await a.page.getByRole('button',{name:'Verify connection',exact:true}).click();await a.page.getByText('Connection not verified.',{exact:false}).first().waitFor();assert.equal(await a.page.getByLabel('Supporting value',{exact:true}).inputValue(),mission.wrong);await a.page.getByLabel('Supporting value',{exact:true}).fill(mission.answer);await sleep(5200);await a.page.getByRole('button',{name:'Verify connection',exact:true}).click();await until(()=>a.snap.room.links.length===1,'first supported connection');
+  await a.page.getByLabel('Comparison',{exact:true}).selectOption('event');await a.page.getByLabel('Supporting value',{exact:true}).fill(mission.event);await a.page.getByRole('button',{name:'Verify connection',exact:true}).click();await until(()=>a.snap.room.links.length===2,'second supported connection');await a.page.locator('.panel').evaluate(el=>el.scrollTop=0);await a.page.screenshot({path:'extended-evidence/'+mission.id+'-wall.png'});
+  const camera=a.snap.room.board.find(c=>c.id==='footage'),reader=a.snap.room.board.find(c=>c.id==='reader');const suspects=camera.candidates.filter(id=>reader.candidates.includes(id));assert.equal(suspects.length,1);
+  await a.page.setViewportSize({width:390,height:844});assert.equal(await a.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await a.page.getByRole('button',{name:'Discuss the completed case',exact:true}).click();await until(()=>a.snap.room.phase==='vote','practice ballot');assert.equal(await a.page.getByLabel('Supporting value',{exact:true}).inputValue(),mission.event);await a.page.getByLabel('Comparison',{exact:true}).selectOption('time');assert.equal(await a.page.getByLabel('Supporting value',{exact:true}).inputValue(),mission.answer);
+  await a.page.getByLabel('Suspected double agent').selectOption(suspects[0]);await a.page.getByLabel('Supporting published evidence').selectOption('footage');await a.page.getByRole('button',{name:'Submit indictment',exact:true}).click();await a.page.locator('.ballot-receipt').getByText('Vote cast:',{exact:false}).waitFor();await a.page.getByLabel('Ballot participation').getByText('Ballot received',{exact:false}).first().waitFor();await until(()=>a.snap.room.phase==='results','practice results',45000);assert.equal(a.snap.room.result.winner,'agents');assert.ok(a.snap.room.players.every(p=>p.score===0));await a.page.screenshot({path:'extended-evidence/'+mission.id+'-victory-mobile.png'});
+  await a.page.getByRole('button',{name:'Play again',exact:true}).click();await until(()=>a.snap.room.phase==='lobby','practice rematch');assert.ok(a.snap.room.players.find(p=>p.bot).ready);await a.page.getByRole('button',{name:'Leave mission',exact:true}).click();await until(()=>!a.snap.room,'practice exit');log('solo-practice',{case:mission.id,fullRound:true,botMoves:true,wallRequired:true,vote:true,rematch:true,mobileWidth:true});
+  assert.deepEqual(errors,[]);
+ }catch(e){console.log(JSON.stringify({event:'case-failed',case:mission.id,error:e.message,errors}));process.exitCode=1;throw e;}
+ finally{await context.close();}
+ }
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});

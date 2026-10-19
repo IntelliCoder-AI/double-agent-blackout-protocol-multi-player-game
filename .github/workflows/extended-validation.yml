@@ -1,0 +1,39 @@
+name: Extended submission validation
+on:
+  push:
+    branches: [main]
+    paths: ['tests/extended/**', '.github/workflows/extended-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: extended-submission-validation
+  cancel-in-progress: true
+jobs:
+  extended:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      BASE_URL: https://double-agent-blackout-protocol-radhe12.vercel.app
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Eight independent guests, outage, host migration, voting and rematch
+        run: node tests/extended/roster.cjs
+      - name: Four additional complete case walkthroughs
+        if: ${{ !cancelled() }}
+        run: node tests/extended/cases.cjs
+      - name: Preserve extended evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: extended-verification
+          path: extended-evidence/
+          if-no-files-found: ignore
+          retention-days: 14
