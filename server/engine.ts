@@ -38,6 +38,7 @@ export interface Round {
   jammed:Record<string,number>;votes:Record<string,{target:string|null;evidence?:string}>;runoffTargets:string[];
   exfil:{endsAt:number}|null;dossier:boolean;result:ResultView|null;timeline:{text:string;at:number}[];
   pauseAt:number|null;pauseSpent:number;voteGrace:boolean;npcNext:number;
+  botSignals?:string[];botRequest?:string;notice?:{id:string;text:string};
 }
 export interface Room {code:string;caseId?:string;mode:Mode;hostId:string;players:Player[];round:Round|null;chat:{id:string;name:string;text:string;at:number}[];roundNumber:number;updatedAt:number;createdAt:number}
 export const defaultTiming={reveal:8000,investigation:270000,discussion:45000,vote:30000,runoff:15000,scan:2500,verify:6000,escrow:120000,exfilStart:90000,exfil:40000};
@@ -86,7 +87,7 @@ export class Engine {
     }else if(c.type==='practice.discuss'){
       need(r.mode==='practice'&&p.id===r.hostId,'This control is only available in your practice mission.','FORBIDDEN');const t=this.live(r,p,now);need(t.dossier&&['footage','reader'].every(id=>t.evidence.some(e=>e.id===id&&e.verified&&e.sharedBy)),'Authenticate and publish both identifying records, then support both Evidence Wall connections.');t.investigationEndedAt=now;t.phase='discussion';t.deadline=now+15000;t.channels={};r.players.forEach(x=>{x.route=[];x.dx=0;x.dz=0;});this.log(t,'Practice case assembled. Discuss the evidence before voting.',now);
     }else if(c.type==='chat'||c.type==='quick'){
-      let text=a.text;if(c.type==='quick') {const reference=r.round?.evidence.find(e=>e.id===a.reference&&e.sharedBy);if(['found','verify','conflict'].includes(a.key))need(reference,'Share the evidence before sending this message.');const label=reference?.title??roomAt(p);text=({found:`Found evidence: ${label}`,verify:`Please verify: ${label}`,help:`Need help in ${roomAt(p)}.`,conflict:`Compare the records: ${label}`,abort:'Abort the upload! Use an emergency console.'} as Record<string,string>)[a.key];}r.chat.push({id:randomUUID(),name:p.name,text,at:now});r.chat=r.chat.slice(-60);
+      let text=a.text;if(c.type==='quick') {const reference=r.round?.evidence.find(e=>e.id===a.reference&&e.sharedBy);if(['found','verify','conflict'].includes(a.key))need(reference,'Share the evidence before sending this message.');if(r.mode==='practice'&&a.key==='verify'&&reference&&r.round)r.round.botRequest=reference.id;const label=reference?.title??roomAt(p);text=({found:`Found evidence: ${label}`,verify:`Please verify: ${label}`,help:`Need help in ${roomAt(p)}.`,conflict:`Compare the records: ${label}`,abort:'Abort the upload! Use an emergency console.'} as Record<string,string>)[a.key];}r.chat.push({id:randomUUID(),name:p.name,text,at:now});r.chat=r.chat.slice(-60);
     }else{
       const t=r.round;need(t,'The mission has not started.');need(c.roundId===t.id,'This action belongs to an old mission.','STALE_ROUND');
       if(c.type==='input.move'){need(t.phase==='investigation'&&!t.pauseAt,'Movement is paused.','WRONG_PHASE');if(a.x||a.z)p.route=[];p.dx=a.x;p.dz=a.z;p.inputAt=now;return r;}
@@ -132,7 +133,7 @@ export class Engine {
     r.updatedAt=now;return r;
   }
   finish(r:Room,winner:ResultView['winner'],reason:string,now:number){const t=r.round!;t.phase='results';t.deadline=now;t.channels={};t.exfil=null;t.pauseAt=null;t.result={winner,reason,culprit:t.culprit,roles:r.players.map(p=>({id:p.id,role:t.roles[p.id]})),forged:t.evidence.filter(e=>e.forged).map(e=>e.id),audit:t.evidence.map(e=>clueView({...e,verified:true})),timeline:[...t.timeline],metrics:{caseId:missionBrief(t.caseId).id,mode:r.mode,playerCount:r.players.length,investigationSeconds:Math.round(this.elapsed(t,t.investigationEndedAt??now)/1000),sharedRecords:t.evidence.filter(e=>e.sharedBy).length,authenticatedRecords:t.evidence.filter(e=>e.verified).length,supportedConnections:t.links.length,completedRepairs:Object.values(t.repairs).filter(x=>x.complete).length,forgeriesExposed:t.evidence.filter(e=>e.forged&&e.verified).length,sabotageActions:Object.values(t.used).reduce((sum,actions)=>sum+actions.length,0),uploadAttempts:t.timeline.filter(x=>x.text.startsWith('EXFILTRATION DETECTED')).length,uploadsAborted:t.timeline.filter(x=>x.text.includes('stopped the exfiltration')).length,sharedRecoveryCopies:t.timeline.filter(x=>x.text.startsWith('Recovery copy published:')).length,contributions:r.players.map((p,seat)=>({seat:seat+1,role:t.roles[p.id],recovered:t.evidence.filter(e=>e.discoveredBy.includes(p.id)).length,published:t.evidence.filter(e=>e.sharedBy===p.id).length}))}};for(const p of r.players){p.route=[];p.dx=0;p.dz=0;if(r.mode==='practice')continue;if(winner==='draw')p.score+=25;else if((winner==='agents'&&t.roles[p.id]==='agent')||(winner==='traitor'&&t.roles[p.id]==='traitor'))p.score+=100;}r.updatedAt=now;}
-  tally(r:Room,now:number){const t=r.round!;const ballots=Object.values(t.votes);const counts:Record<string,number>={};for(const b of ballots)if(b.target)counts[b.target]=(counts[b.target]??0)+1;const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const top=sorted[0];const valid=ballots.length>=this.quorum(r)&&top&&top[1]>=2&&(!sorted[1]||top[1]>sorted[1][1]);
+  tally(r:Room,now:number){const t=r.round!;const ballots=r.mode==='practice'?r.players.filter(p=>!p.bot).flatMap(p=>t.votes[p.id]?[t.votes[p.id]]:[]):Object.values(t.votes);const counts:Record<string,number>={};for(const b of ballots)if(b.target)counts[b.target]=(counts[b.target]??0)+1;const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const top=sorted[0];const valid=ballots.length>=(r.mode==='practice'?1:this.quorum(r))&&top&&top[1]>=(r.mode==='practice'?1:2)&&(!sorted[1]||top[1]>sorted[1][1]);
     if(valid){this.finish(r,top[0]===t.culprit?'agents':'traitor',top[0]===t.culprit?'The evidence held. The double agent has been exposed.':'The wrong operative was indicted. The double agent escaped.',now);return;}
     if(t.phase==='vote'){t.phase='runoff';t.deadline=now+this.timing.runoff;t.votes={};t.runoffTargets=top&&sorted.filter(x=>x[1]===top[1]).length>1?sorted.filter(x=>x[1]===top[1]).map(x=>x[0]):r.mode!=='social'?['npc-mira','npc-orin','npc-tessa']:r.players.map(p=>p.id);return;}
     const contained=Object.values(t.repairs).filter(x=>x.complete).length>=2;this.finish(r,contained?'draw':'traitor',contained?'The intelligence is secure, but the accusation remained unproven.':'No indictment. The double agent escaped with the intelligence.',now);
@@ -179,31 +180,48 @@ export class Engine {
   practiceBot(r:Room,now:number){
     const bot=r.players.find(p=>p.bot),t=r.round;if(!bot||!t||now-(bot.botAt??0)<500)return;bot.botAt=now;
     const act=(type:string,payload:Record<string,unknown>={})=>this.command(bot.session,{id:randomUUID(),type,payload,roundId:t.id},now);
-    // The companion uses only its assigned/discovered records and the published wall.
-    // It never reads the culprit or solves from an unrecovered canonical source.
+    const say=(key:string,text:string)=>{const sent=t.botSignals??=[];if(sent.includes(key))return;sent.push(key);r.chat.push({id:randomUUID(),name:bot.name,text,at:now});r.chat=r.chat.slice(-60);};
+    // Reason only from published or personally recovered records. Never inspect t.culprit.
+    const published=t.evidence.filter(e=>e.sharedBy);
     if(t.phase==='vote'||t.phase==='runoff'){
-      if(t.votes[bot.id])return;
-      const camera=t.evidence.find(e=>e.id==='footage'&&e.sharedBy&&e.verified),reader=t.evidence.find(e=>e.id==='reader'&&e.sharedBy&&e.verified);
+      const camera=published.find(e=>e.id==='footage'&&e.verified),reader=published.find(e=>e.id==='reader'&&e.verified);
       const candidates=camera&&reader?camera.candidates?.filter(id=>reader.candidates?.includes(id))??[]:[];
-      if(candidates.length===1&&(t.phase!=='runoff'||t.runoffTargets.includes(candidates[0])))act('vote',{target:candidates[0],evidence:'footage'});
-      else act('vote',{target:null});return;
+      const target=candidates.length===1&&(t.phase!=='runoff'||t.runoffTargets.includes(candidates[0]))?candidates[0]:null;
+      if(!t.votes[bot.id]||t.votes[bot.id].target!==target)act('vote',target?{target,evidence:'footage'}:{target:null});
+      say('vote-'+t.phase,target?'Both authenticated access groups agree. I have cast my advisory ballot. Your evidence-backed ballot decides this practice round.':'I abstained: the wall needs both authenticated identifying records. Your evidence-backed ballot still decides this practice round.');return;
     }
-    if(t.phase!=='investigation'||t.pauseAt||t.channels[bot.id])return;
-    const record=t.evidence.find(e=>e.grantedTo===bot.id&&(!e.discoveredBy.includes(bot.id)||!e.verified||!e.sharedBy));
+    if(t.phase==='discussion'){say('discussion','Find the one name in BOTH the camera and access-receipt groups. Cite a published record when you vote.');return;}
+    if(t.phase!=='investigation'||t.pauseAt)return;
+    say('intro','I will recover my assigned sources, then help authenticate shared records. Your ballot decides practice; I never vote from secret case data.');
+    if(published.some(e=>e.id==='clock'))say('clock',['ghost','midnight','relay'].includes(t.caseId??'ghost')?'Camera clock looks off. Compare the signed receipt with the footage, then enter the corrected time at the wall.':'The exported record needs a correction. Compare it with the signed receipt before supporting a wall connection.');
+    if(published.some(e=>e.verified&&e.forged))say('forgery','Authentication exposed a forged export on the wall. Use the restored signed value for your comparison.');
+    if(published.some(e=>!e.verified))say('verify','A pinned record is still unverified. I can authenticate published sources at a verifier; select a source to ask the team.');
+    const requested=published.find(e=>e.id===t.botRequest);
+    if(requested){say('request-'+requested.id,requested.verified?'Requested source is already authenticated. Check its signed reference on the wall.':'Verification request received. I will take that published source to a verifier.');if(requested.verified)t.botRequest=undefined;}
+    const current=t.channels[bot.id];
     let station='board',type='',payload:Record<string,unknown>={};
-    if(record){
-      if(!record.discoveredBy.includes(bot.id)){station=record.id;type='interact';payload={station};}
-      else if(!record.verified){station=(t.jammed['verify-b']??0)>now?'verify-a':'verify-b';if((t.jammed[station]??0)>now)return;type='interact';payload={station,evidence:record.id};}
-      else {type='evidence.share';payload={evidence:record.id};}
+    if(t.exfil){
+      say('abort','Upload detected. I am heading to an emergency console to abort. You can also help from either console.');
+      if(current?.kind==='abort')return;
+      if(current)act('cancel');
+      station=distance(bot,STATIONS.find(s=>s.id==='abort-a')!)<distance(bot,STATIONS.find(s=>s.id==='abort-b')!)?'abort-a':'abort-b';type='interact';payload={station};
+    }else{
+      if(current)return;
+      const record=(requested&&!requested.verified?requested:undefined)??t.evidence.find(e=>e.grantedTo===bot.id&&(!e.verified||!e.sharedBy))??published.find(e=>!e.verified);
+      if(record){
+        if(!record.discoveredBy.includes(bot.id)&&!record.sharedBy){station=record.id;type='interact';payload={station};}
+        else if(!record.verified){station=(t.jammed['verify-b']??0)>now?'verify-a':'verify-b';if((t.jammed[station]??0)>now)return;type='interact';payload={station,evidence:record.id};}
+        else {type='evidence.share';payload={evidence:record.id};}
+      }else say('ready','My records are on the wall. Pin yours too. Authenticate the clock/footage and event/access pairs to support the two connections.');
     }
     const target=STATIONS.find(s=>s.id===station)!;
-    if(distance(bot,target)>2.65){if(!bot.route?.length)act('move.to',{x:target.x,z:target.z+.8});return;}
+    if(distance(bot,target)>2.65){const destination=bot.route?.at(-1);if(!destination||distance(destination,{x:target.x,z:target.z+.8})>.2)act('move.to',{x:target.x,z:target.z+.8});return;}
     if(type){try{act(type,payload);}catch(err){if(!(err instanceof GameError))throw err;}}
   }
   completeChannel(r:Room,p:Player,c:Channel,now:number){const t=r.round!;
     if(c.kind==='scan'){const e=t.evidence.find(e=>e.id===c.target)!;if(!e.discoveredBy.includes(p.id))e.discoveredBy.push(p.id);if(this.elapsed(t,now)>=this.timing.escrow&&!e.sharedBy){e.sharedBy=p.id;this.log(t,`Recovery copy published: ${e.title}.`,now);}}
     else if(c.kind==='verify'){if((t.jammed[c.station]??0)>now)return;const e=t.evidence.find(e=>e.id===c.target)!;e.verified=true;this.log(t,`${p.name} verified ${e.title}${e.forged?' and exposed a forged export':''}.`,now);}
-    else if(c.kind==='abort'){if(t.exfil&&now<t.exfil.endsAt){t.exfil=null;this.log(t,`${p.name} stopped the exfiltration.`,now);}}
+    else if(c.kind==='abort'){if(t.exfil&&now<t.exfil.endsAt){t.exfil=null;this.log(t,`${p.name} stopped the exfiltration.`,now);t.notice={id:randomUUID(),text:`Upload aborted. ${p.name} secured the intelligence.`};}}
     else{
       const cost=['forge','exfil'].includes(c.kind)?2:1;if((t.charges[p.id]??0)<cost)return;
       if(c.kind==='forge'){const e=t.evidence.find(e=>e.id===c.target);if(!e||e.verified)return;e.observed=caseTruth(t.caseId).exported;e.forged=true;}
@@ -214,7 +232,7 @@ export class Engine {
     }
   }
   snapshot(session:string,now=Date.now()):Snapshot {const r=this.locate(session);if(!r)return{type:'snapshot',room:null,self:null,serverTime:now};const p=this.member(r,session),t=r.round;
-    return {type:'snapshot',serverTime:now,room:{mission:missionBrief(t?.caseId??r.caseId),code:r.code,mode:r.mode,hostId:r.hostId,phase:t?.phase??'lobby',roundId:t?.id??null,deadline:t?.deadline??null,serverTime:now,players:r.players.map(({id,name,color,ready,connected,score,x,z,bot})=>({id,name,color,ready,connected,score,x,z,room:roomAt({x,z}),...(bot?{bot:true}:{})})),suspects:r.mode!=='social'?[{id:'npc-mira',name:'Mira Voss'},{id:'npc-orin',name:'Orin Vale'},{id:'npc-tessa',name:'Tessa Rook'}]:r.players.map(({id,name})=>({id,name})),board:t?.evidence.filter(e=>e.sharedBy).map(clueView)??[],links:t?.links??[],repairs:t?Object.fromEntries(Object.entries(t.repairs).map(([k,v])=>[k,{step:v.step,complete:v.complete,jammedUntil:v.jammedUntil}])):{},jammed:t?.jammed??{},chat:r.chat,exfil:t?.exfil??null,elapsed:t?this.elapsed(t,now):0,paused:t?.pauseAt!==null&&t?.pauseAt!==undefined,pauseRemaining:t?.pauseAt?Math.max(0,45000-t.pauseSpent-(now-t.pauseAt)):45000,dossier:t?.dossier??false,result:t?.result??null,roundNumber:r.roundNumber,ruleHint:'Indict the culprit using a published record. Repair systems to contain the breach.',runoffTargets:t?.runoffTargets??[]},self:{id:p.id,role:t?.roles[p.id]??null,clues:t?.evidence.filter(e=>e.discoveredBy.includes(p.id)).map(clueView)??[],grants:t?.evidence.filter(e=>e.grantedTo===p.id).map(e=>e.id)??[],charges:t?.roles[p.id]==='traitor'?t.charges[p.id]:0,cooldownUntil:t?.cooldowns[p.id]??0,channel:t?.channels[p.id]?{kind:t.channels[p.id].kind,target:t.channels[p.id].target,endsAt:t.channels[p.id].endsAt}:null,vote:t?.votes[p.id]?.target??null,voteSubmitted:!!t?.votes[p.id],abilitiesUsed:t?.roles[p.id]==='traitor'?t.used[p.id]??[]:[]}};
+    return {type:'snapshot',serverTime:now,room:{mission:missionBrief(t?.caseId??r.caseId),code:r.code,mode:r.mode,hostId:r.hostId,phase:t?.phase??'lobby',roundId:t?.id??null,deadline:t?.deadline??null,serverTime:now,players:r.players.map(({id,name,color,ready,connected,score,x,z,bot})=>({id,name,color,ready,connected,score,x,z,room:roomAt({x,z}),...(bot?{bot:true}:{})})),suspects:r.mode!=='social'?[{id:'npc-mira',name:'Mira Voss'},{id:'npc-orin',name:'Orin Vale'},{id:'npc-tessa',name:'Tessa Rook'}]:r.players.map(({id,name})=>({id,name})),board:t?.evidence.filter(e=>e.sharedBy).map(clueView)??[],links:t?.links??[],repairs:t?Object.fromEntries(Object.entries(t.repairs).map(([k,v])=>[k,{step:v.step,complete:v.complete,jammedUntil:v.jammedUntil}])):{},jammed:t?.jammed??{},chat:r.chat,exfil:t?.exfil??null,elapsed:t?this.elapsed(t,now):0,paused:t?.pauseAt!==null&&t?.pauseAt!==undefined,pauseRemaining:t?.pauseAt?Math.max(0,45000-t.pauseSpent-(now-t.pauseAt)):45000,dossier:t?.dossier??false,result:t?.result??null,roundNumber:r.roundNumber,ruleHint:'Indict the culprit using a published record. Repair systems to contain the breach.',runoffTargets:t?.runoffTargets??[],votedIds:t&&['vote','runoff'].includes(t.phase)?Object.keys(t.votes):[],notice:t?.notice},self:{id:p.id,role:t?.roles[p.id]??null,clues:t?.evidence.filter(e=>e.discoveredBy.includes(p.id)).map(clueView)??[],grants:t?.evidence.filter(e=>e.grantedTo===p.id).map(e=>e.id)??[],charges:t?.roles[p.id]==='traitor'?t.charges[p.id]:0,cooldownUntil:t?.cooldowns[p.id]??0,channel:t?.channels[p.id]?{kind:t.channels[p.id].kind,target:t.channels[p.id].target,endsAt:t.channels[p.id].endsAt}:null,vote:t?.votes[p.id]?.target??null,voteSubmitted:!!t?.votes[p.id],abilitiesUsed:t?.roles[p.id]==='traitor'?t.used[p.id]??[]:[]}};
   }
 }
 

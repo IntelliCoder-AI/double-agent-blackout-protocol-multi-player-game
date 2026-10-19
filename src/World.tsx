@@ -12,6 +12,7 @@ function FrameBudget({fps}:{fps:number}){
  useEffect(()=>{let last=0;const timer=setInterval(()=>{const now=performance.now(),interval=document.hasFocus()?1000/fps:500;if(document.visibilityState==='visible'&&now-last>=interval){last=now;invalidate();}},1000/fps);return()=>clearInterval(timer);},[fps,invalidate]);
  return null;
 }
+function FirstFrame({onReady,onFailure}:{onReady:()=>void;onFailure:()=>void}){const {gl}=useThree();useEffect(()=>{const lost=(e:Event)=>{e.preventDefault();onFailure();};gl.domElement.addEventListener('webglcontextlost',lost);return()=>gl.domElement.removeEventListener('webglcontextlost',lost);},[gl,onFailure]);const sent=useRef(false);useFrame(()=>{if(!sent.current){sent.current=true;onReady();}});return null;}
 function PerformanceProbe({measuring,quality,onSample}:{measuring:boolean;quality:string;onSample:(sample:PerformanceSample)=>void}){
  const data=useRef({frames:[] as number[],seconds:0,maxCalls:0,maxTriangles:0});const {gl,size}=useThree();
  useEffect(()=>{data.current={frames:[],seconds:0,maxCalls:0,maxTriangles:0};},[measuring,quality]);
@@ -93,6 +94,27 @@ function Furniture(){return <group>{[10,13].map(x=><group key={x}>{[-13.7,-12.5]
  <Box at={[-13,.7,-13.6]} size={[7,1.4,1]} />{[-15,-13,-11].map(x=><group key={x}><Box at={[x,1.9,-13.8]} size={[1.6,.95,.1]} color="#28535c" glow="#24454e"/>{[0,1,2,3].map(i=><Box key={i} at={[x-.4+i*.23,1.9+Math.sin(i)*.15,-13.7]} size={[.04,.3,.02]} glow="#7fc2cf"/>)}</group>)}
  {[[-6,3],[6,-3],[-17,-3],[17,3]].map(([x,z],i)=><group key={i}><Box at={[x,1.9,z]} size={[.3,3.8,.3]}/><Box at={[x,3.7,z]} size={[2,.1,.3]} glow="#bdeedd"/></group>)}
  </group>;}
+function Architecture(){return <group>
+ {ROOMS.map(r=><group key={r.id}>
+  {[-1,1].map(side=><group key={side}><Box at={[r.x+side*(r.w/2-.2),2,r.z-r.d/2+.2]} size={[.34,4,.45]} color="#304148"/><Box at={[r.x+side*(r.w/2-.18),2,r.z-r.d/2+.48]} size={[.06,2.9,.05]} glow={r.color}/></group>)}
+  <Box at={[r.x,4,r.z-r.d/2+.2]} size={[r.w,.28,.45]} color="#34464d"/>
+  <Box at={[r.x,3.88,r.z-r.d/2+.49]} size={[r.w-.5,.035,.04]} glow={r.color}/>
+  <Box at={[r.x,-.02,r.z+r.d/2-.3]} size={[r.w,.15,.16]} color="#3b5156"/>
+ </group>)}
+ {[-5.7,5.7].map(x=><group key={x}><Box at={[x,2.25,-5.6]} size={[2.6,2.5,.12]} color="#0b1925"/><Box at={[x,2.25,-5.5]} size={[2.3,2.2,.03]} color="#244855"/>{[0,1,2,3].map(i=><Box key={i} at={[x-1+i*.65,2.25,-5.46]} size={[.03,2.2,.04]} glow="#4c807d"/>)}</group>)}
+ {[-7,7].map(x=><group key={x}><Box at={[x,2.2,3.8]} size={[.4,4.4,.45]} color="#304148"/><Box at={[x,4.2,-.5]} size={[.4,.3,8.6]} color="#34464d"/><Box at={[x,4.04,-.5]} size={[.07,.04,7.8]} glow="#8abdc1"/></group>)}
+ {[-13,13].map(x=><group key={x}>{[-1.5,1.5].map(z=><Box key={z} at={[x,.01,z]} size={[6,.025,.07]} glow="#5b8c86"/>)}</group>)}
+ <Label text="AEGIS / BLACKOUT PROTOCOL" at={[0,.035,4.8]} size={.8}/>
+ </group>;}
+function AutoDoor({x,room,reduced}:{x:number;room:PublicRoom|null;reduced:boolean}){
+ const left=useRef<THREE.Group>(null!),right=useRef<THREE.Group>(null!);
+ const open=!room||room.players.some(p=>Math.hypot(p.x-x,p.z)<5);
+ useFrame((_state,dt)=>{const amount=open?1.8:0;const mix=reduced?1:Math.min(1,dt*7);left.current.position.z=THREE.MathUtils.lerp(left.current.position.z,-amount,mix);right.current.position.z=THREE.MathUtils.lerp(right.current.position.z,amount,mix);});
+ return <group position={[x,0,0]}><Box at={[0,3.6,0]} size={[.6,.4,5]}/>{[-2.5,2.5].map(z=><Box key={z} at={[0,1.8,z]} size={[.6,3.6,.3]}/>)}
+  <group ref={left}><Box at={[0,1.7,-1.1]} size={[.12,3.2,2.1]} color="#233d46"/><Box at={[.08,1.7,-.1]} size={[.04,2.8,.04]} glow="#7ae7d3"/></group>
+  <group ref={right}><Box at={[0,1.7,1.1]} size={[.12,3.2,2.1]} color="#233d46"/><Box at={[.08,1.7,.1]} size={[.04,2.8,.04]} glow="#7ae7d3"/></group>
+ </group>;
+}
 function Station({station,active,onSelect,room}:{station:typeof STATIONS[number];active:boolean;onSelect:(id:string)=>void;room:PublicRoom|null}){
  const s=station;const complete=room?.repairs[s.id]?.complete;const c=complete?'#a4eb93':s.kind==='abort'||s.kind==='exfil'?'#ed9f83':'#7ee6d0';
  if(s.id==='board')return null;
@@ -110,16 +132,16 @@ function Avatar({p,self,reduced}:{p:{x:number;z:number;color:string;connected:bo
 function Camera({player,menu,reduced}:{player?:Point;menu:boolean;reduced:boolean}){const {camera}=useThree();const target=useRef(new THREE.Vector3());useFrame(({clock},dt)=>{const p=menu?{x:3,z:0}:player??{x:0,z:0};const d=menu?27:18;const pos=new THREE.Vector3(p.x+d+(menu&&!reduced?Math.sin(clock.elapsedTime*.045)*2:0),menu?29:23,p.z+d);camera.position.lerp(pos,Math.min(1,dt*(menu?.8:3)));target.current.lerp(new THREE.Vector3(p.x,0,p.z),Math.min(1,dt*3));camera.lookAt(target.current);});return null;}
 function StaticBatch({children}:{children:ReactNode}){const group=useRef<THREE.Group>(null!);useLayoutEffect(()=>{const batch=batchStatic(group.current);return()=>batch.dispose();},[]);return <group ref={group}>{children}</group>;}
 const StaticFloor=memo(function StaticFloor({onMove}:{onMove:(p:Point)=>void}){return <StaticBatch><Floor onMove={onMove}/></StaticBatch>;});
-const StaticFurniture=memo(function StaticFurniture(){return <StaticBatch><Furniture/></StaticBatch>;});
-export function World({room,self,onStation,onMove,selected,quality,reduced,obscured=false,onReady,measuring=false,onPerformance=()=>{}}:{room:PublicRoom|null;self:SelfView|null;onStation:(id:string)=>void;onMove:(p:Point)=>void;selected:string|null;quality:string;reduced:boolean;obscured?:boolean;onReady:()=>void;measuring?:boolean;onPerformance?:(sample:PerformanceSample)=>void}){
+const StaticFurniture=memo(function StaticFurniture(){return <StaticBatch><Furniture/><Architecture/></StaticBatch>;});
+export function World({room,self,onStation,onMove,selected,quality,reduced,obscured=false,onReady,onFailure=()=>{},measuring=false,onPerformance=()=>{}}:{room:PublicRoom|null;self:SelfView|null;onStation:(id:string)=>void;onMove:(p:Point)=>void;selected:string|null;quality:string;reduced:boolean;obscured?:boolean;onReady:()=>void;onFailure?:()=>void;measuring?:boolean;onPerformance?:(sample:PerformanceSample)=>void}){
  const low=quality==='low';const player=room?.players.find(p=>p.id===self?.id);const menu=!room||room.phase==='lobby';
  const moveHandler=useRef(onMove);moveHandler.current=onMove;const moveTo=useCallback((p:Point)=>moveHandler.current(p),[]);
- return <Canvas frameloop={low?'demand':'always'} shadows={low?false:'percentage'} dpr={low?.75:[1,1.5]} camera={{position:[28,30,33],fov:43,near:.1,far:160}} gl={{antialias:!low,powerPreference:low?'low-power':'high-performance'}} onCreated={()=>onReady()} fallback={<div className="webgl-error">This device could not initialize 3D graphics. Enable hardware acceleration and reload.</div>}>
+ return <Canvas frameloop={low?'demand':'always'} shadows={low?false:'percentage'} dpr={low?.75:[1,1.5]} camera={{position:[28,30,33],fov:43,near:.1,far:160}} gl={{antialias:!low,powerPreference:low?'low-power':'high-performance'}}  fallback={<div className="webgl-error">This device could not initialize 3D graphics. Enable hardware acceleration and reload.</div>}>
   {low&&<FrameBudget fps={obscured?3:menu?15:30}/>}
   <color attach="background" args={['#081215']}/><fog attach="fog" args={['#081215',40,100]}/><Environment/>
   <ambientLight intensity={.6}/><hemisphereLight args={['#bcf8e4','#1d3044',1.4]}/><directionalLight position={[5,25,8]} intensity={2.5} color="#b9e8d5" castShadow={!low} shadow-mapSize={[1024,1024]} shadow-camera-left={-24} shadow-camera-right={24} shadow-camera-top={24} shadow-camera-bottom={-24} shadow-bias={-.001}/>
   <directionalLight position={[-20,6,-15]} intensity={1.5} color="#6ca3b2"/>
-  <Suspense fallback={null}><StaticFloor onMove={moveTo}/><StaticFurniture/><Atmosphere low={low} reduced={reduced}/><SecurityDisplay room={room} reduced={reduced} onSelect={()=>onStation('footage')}/><HoloTable room={room} onBoard={()=>onStation('board')} reduced={reduced}/><Reactor stable={room?.repairs['repair-reactor']?.complete??false} alert={!!room?.exfil} reduced={reduced}/>
+  <Suspense fallback={null}><FirstFrame onReady={onReady} onFailure={onFailure}/><StaticFloor onMove={moveTo}/><StaticFurniture/>{[-8.4,8.4].map(x=><AutoDoor key={x} x={x} room={room} reduced={reduced}/>)}<Atmosphere low={low} reduced={reduced}/><SecurityDisplay room={room} reduced={reduced} onSelect={()=>onStation('footage')}/><HoloTable room={room} onBoard={()=>onStation('board')} reduced={reduced}/><Reactor stable={room?.repairs['repair-reactor']?.complete??false} alert={!!room?.exfil} reduced={reduced}/>
    {STATIONS.map(s=><Station key={s.id} station={s} active={selected===s.id} onSelect={onStation} room={room}/>)}
    {room?.players.map(p=><Avatar key={p.id} p={p} self={p.id===self?.id} reduced={reduced}/>)}
   </Suspense><Camera player={player} menu={menu} reduced={reduced}/><PerformanceProbe measuring={measuring} quality={quality} onSample={onPerformance}/>

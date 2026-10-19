@@ -57,10 +57,52 @@ test('bot ballots abstain without published authenticated identifying evidence, 
  cmd('room.create',{name:'Reviewer',mode:'practice'});const r=e.locate(sid)!;cmd('lobby.ready',{ready:true});cmd('round.start');
  const t=r.round!,bot=r.players.find(p=>p.bot)!;t.phase='vote';t.deadline=now+30000;
  e.tick(now+1000);assert.deepEqual(t.votes[bot.id],{target:null,evidence:undefined});
- delete t.votes[bot.id];const a=t.evidence.find(c=>c.id==='footage')!,b=t.evidence.find(c=>c.id==='reader')!;
+ const a=t.evidence.find(c=>c.id==='footage')!,b=t.evidence.find(c=>c.id==='reader')!;
  a.verified=b.verified=true;a.sharedBy=b.sharedBy=r.players[0].id;const proven=a.candidates!.find(id=>b.candidates!.includes(id))!;
  t.culprit='deliberately-wrong-hidden-value';e.tick(now+2000);assert.equal(t.votes[bot.id].target,proven);
  e.connected(sid,false,now+2000);e.tick(now+20000);assert.equal(r.hostId,r.players[0].id);
+});
+
+test('solo verdict follows the human backed ballot even when ATLAS abstains',()=>{
+ for(const correct of [true,false]){
+  const e=new Engine(),sid=randomUUID(),now=1000000;
+  const cmd=(type:string,payload:Record<string,unknown>={})=>e.command(sid,{id:randomUUID(),type,payload,roundId:e.locate(sid)?.round?.id},now);
+  cmd('room.create',{name:'Solo Judge',mode:'practice'});const r=e.locate(sid)!;cmd('lobby.ready',{ready:true});cmd('round.start');
+  const t=r.round!,human=r.players[0],bot=r.players[1];t.phase='vote';t.deadline=now+30000;
+  const target=correct?t.culprit:['npc-mira','npc-orin','npc-tessa'].find(id=>id!==t.culprit)!;
+  assert.throws(()=>cmd('vote',{target,evidence:'reader'}));
+  t.evidence.find(c=>c.id==='reader')!.sharedBy=human.id;
+  cmd('vote',{target,evidence:'reader'});e.tick(now+1000);
+  assert.equal(t.votes[bot.id].target,null,'must not vote from hidden case truth');
+  assert.deepEqual(new Set(e.snapshot(sid,now+1000).room!.votedIds),new Set([human.id,bot.id]));
+  e.tick(now+30001);assert.equal(t.result?.winner,correct?'agents':'traitor');
+ }
+});
+
+test('ATLAS verifies a requested shared source, explains forgery and physically aborts',()=>{
+ const e=new Engine(),sid=randomUUID();let now=1000000;
+ const cmd=(type:string,payload:Record<string,unknown>={})=>e.command(sid,{id:randomUUID(),type,payload,roundId:e.locate(sid)?.round?.id},now);
+ cmd('room.create',{name:'Solo Judge',mode:'practice'});const r=e.locate(sid)!;cmd('lobby.ready',{ready:true});cmd('round.start');
+ const step=(ms:number)=>{for(let n=0;n<ms;n+=50){now+=50;e.tick(now,.05);}};step(8050);
+ const t=r.round!,human=r.players[0],bot=r.players[1];
+ for(const record of t.evidence.filter(c=>c.grantedTo===bot.id)){record.discoveredBy=[bot.id];record.verified=true;record.sharedBy=bot.id;}
+ const camera=t.evidence.find(c=>c.id==='footage')!;camera.sharedBy=human.id;camera.verified=false;camera.forged=true;
+ cmd('quick',{key:'verify',reference:'footage'});step(30000);assert.ok(camera.verified);
+ assert.ok(r.chat.some(c=>c.text.includes('Verification request received')));
+ assert.ok(r.chat.some(c=>c.name===bot.name&&c.text.includes('forged export')));
+ t.exfil={endsAt:now+40000};step(20000);assert.equal(t.exfil,null);assert.ok(t.notice?.text.includes('Upload aborted'));
+ assert.ok(r.chat.some(c=>c.text.includes('emergency console')));
+ const messages=r.chat.length;step(10000);assert.equal(r.chat.length,messages,'coaching must not spam');
+});
+
+test('directory routes never teleport or bypass physical proximity checks',()=>{
+ const e=new Engine(),sid=randomUUID();let now=1000000;
+ const cmd=(type:string,payload:Record<string,unknown>={})=>e.command(sid,{id:randomUUID(),type,payload,roundId:e.locate(sid)?.round?.id},now);
+ cmd('room.create',{name:'Walker',mode:'practice'});cmd('lobby.ready',{ready:true});cmd('round.start');now+=9000;e.tick(now);
+ const r=e.locate(sid)!,p=r.players[0],before={x:p.x,z:p.z},target=STATIONS.find(s=>s.id==='footage')!;
+ cmd('move.to',{x:target.x,z:target.z+.8});assert.deepEqual({x:p.x,z:p.z},before);
+ assert.throws(()=>cmd('interact',{station:'footage'}),err=>err instanceof GameError&&err.code==='TOO_FAR');
+ now+=50;e.tick(now,.05);assert.ok(distance(p,before)<=5.2*.05+.001);
 });
 
 test('seat namespaces validate UUIDs and never substitute for guest credentials',()=>{

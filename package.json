@@ -7,15 +7,15 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "node --import tsx server/index.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx server/index.ts",
     "build": "tsc --noEmit && vite build && esbuild server/index.ts server/migrate.ts server/migrate-hosted.ts --bundle --platform=node --format=esm --packages=external --outdir=dist-server",
-    "start": "node dist-server/index.js",
+    "start": "node --env-file-if-exists=.env dist-server/index.js",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:browser": "playwright test",
     "typecheck": "tsc --noEmit",
     "test:network": "node --import tsx --test tests/network/*.test.ts",
-    "migrate": "node dist-server/migrate.js",
-    "migrate:hosted": "node dist-server/migrate-hosted.js"
+    "migrate": "node --env-file-if-exists=.env dist-server/migrate.js",
+    "migrate:hosted": "node --env-file-if-exists=.env dist-server/migrate-hosted.js"
   },
   "dependencies": {
     "react": "19.2.8",

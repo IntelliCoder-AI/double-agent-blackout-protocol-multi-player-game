@@ -78,7 +78,7 @@ Co-op assigns both humans loyal roles. One of three NPC suspects is the culprit.
 ## Voting, outcomes and interruption
 
 - The server validates suspects, sources, phase and deadline. Votes remain private until the outcome; the player can revise a ballot until voting closes.
-- A valid indictment needs a unique leading suspect, at least two nominations, and participation from `max(2, ceil(roster / 2))` players. Abstentions count as participation, not nominations. Co-op therefore requires both players to agree.
+- In human multiplayer, a valid indictment needs a unique leading suspect, at least two nominations, and participation from `max(2, ceil(roster / 2))` players. Abstentions count as participation, not nominations. Co-op therefore requires both players to agree.
 - A correct indictment wins for the agents even without repairs. A wrong indictment wins for the traitor. An unopposed completed upload wins immediately for the traitor.
 - A tie or insufficient support triggers one runoff. Tied leaders are the runoff choices; otherwise the original roster remains eligible. If still inconclusive, two repairs produce a draw; otherwise the traitor wins.
 - Cast ballots remain valid if their author disconnects. Missing players are not silently removed from the denominator. If connected quorum is missing at vote closure, one 20-second reconnect grace is allowed, then no score is awarded if quorum remains missing.
@@ -94,3 +94,16 @@ Practice is a separate, private mode with one human and one clearly labeled serv
 The lobby offers a separate-seat tab with its own HttpOnly guest cookie. The seat identifier in the URL is a public cookie namespace, not a credential; it cannot authenticate without that cookie. Refresh keeps the seat. Callsigns are editable in the lobby, validated for uniqueness, and fixed during a round.
 
 When the last guest explicitly leaves a multiplayer lobby or completed mission, the code remains joinable for 30 idle minutes; the next entrant becomes host. Practice rooms are deleted when exited. Disconnected guests retain their seats under the existing reconnect rules. Hosted idle lobbies allow a 45-second presence grace; active rounds retain their 15-second presence threshold and subsequent quorum rules. Forced-write heartbeats renew presence at least every five seconds while requests succeed. Browser background suspension beyond the grace can still disconnect a guest.
+
+
+## Practice verdict and assistance
+
+In solo practice the human's nomination with a published Evidence Wall source decides the verdict. ATLAS is advisory: its abstention or disagreement cannot veto the human ballot. A correct nomination wins; a wrong one loses. Abstaining or not submitting leads to one runoff, then the existing containment/draw rules. Practice awards no XP. Human multiplayer retains its quorum and two-nomination rules.
+
+ATLAS uses only recovered or published evidence, never the secret culprit. It nominates the unique overlap of both authenticated identifying groups and otherwise explains its abstention. It verifies shared sources, acknowledges requests, flags authenticated forgeries and physically routes to abort uploads. Coaching is limited to one message per topic per round.
+
+Participation indicators show whose ballot was received, never another player's target or supporting source. Comparator drafts survive phase changes separately; closed investigation drafts become read-only. Ballot selections remain available in a runoff but must be submitted again.
+
+## Rendering fallback
+
+The normal world is real-time 3D. If WebGL cannot initialize within 12 visible seconds or its context is lost, a labeled live tactical map preserves movement, positions and console interaction. It uses the same server-validated actions. Performance-mode retry can restore 3D on supported devices. No static image is used as a game world.

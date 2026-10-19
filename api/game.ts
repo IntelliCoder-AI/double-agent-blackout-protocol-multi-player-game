@@ -12,7 +12,7 @@ export default async function handler(req:IncomingMessage,res:ServerResponse){
  const send=(status:number,body:unknown)=>{res.statusCode=status;res.end(JSON.stringify(body));};
  try{
   const url=new URL(req.url??'/','https://localhost');const route=url.searchParams.get('route');
-  if(route==='health'){await pool.query('SELECT id FROM game_private.hosted_world WHERE id=1');return send(200,{ok:true,transport:'https',version:'b3-practice-seats'});}
+  if(route==='health'){await pool.query('SELECT id FROM game_private.hosted_world WHERE id=1');return send(200,{ok:true,transport:'https',version:'b3-submission-rc1'});}
   if(req.method!=='POST')return send(405,{error:'Method not allowed.'});
   if(!process.env.APP_ORIGIN||req.headers.origin!==process.env.APP_ORIGIN)return send(403,{error:'Origin rejected.'});
   const seat=req.headers['x-player-seat'];if(seat!==undefined&&(typeof seat!=='string'||!validSeat(seat)))return send(400,{error:'Invalid player seat.'});

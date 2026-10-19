@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { readFile } from 'node:fs/promises';
+import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Room } from './engine.js';
 import { PGlite } from '@electric-sql/pglite';
@@ -7,6 +8,7 @@ export class Store {
   pool:pg.Pool; embedded:PGlite|null=null; owner:pg.PoolClient|null=null;
   constructor(url:string){
     if(url.startsWith('file:')||url==='memory:'){
+      if(url.startsWith('file:'))mkdirSync(resolve(url.slice(5)),{recursive:true});
       this.embedded=new PGlite(url==='memory:'?undefined:url.slice(5));const db=this.embedded;
       this.pool={query:(sql:string,params?:unknown[])=>db.query(sql,params),connect:async()=>({query:(sql:string,params?:unknown[])=>db.query(sql,params),release:()=>{}}),end:()=>db.close()} as unknown as pg.Pool;
     }else this.pool=new pg.Pool({connectionString:url,max:5,connectionTimeoutMillis:5000,statement_timeout:5000});

@@ -19,7 +19,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -49,14 +49,29 @@ jobs:
         run: npm run build
       - name: Public API readiness
         run: |
-          node -e "const pause=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let n=0;n<60;n++){try{const r=await fetch(process.env.BASE_URL+'/health/ready');const v=await r.json();if(r.ok&&v.version==='b3-practice-seats'){console.log(JSON.stringify({event:'public-health',status:r.status,...v}));return;}}catch{}await pause(3000);}throw Error('Expected deployment did not become ready');})().catch(e=>{console.error(e.message);process.exitCode=1;})"
+          node -e "const pause=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let n=0;n<60;n++){try{const r=await fetch(process.env.BASE_URL+'/health/ready');const v=await r.json();if(r.ok&&v.version==='b3-submission-rc1'){console.log(JSON.stringify({event:'public-health',status:r.status,...v}));return;}}catch{}await pause(3000);}throw Error('Expected deployment did not become ready');})().catch(e=>{console.error(e.message);process.exitCode=1;})"
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Solo practice and single-browser reviewer flow
         run: node tests/live/reviewer.cjs
+      - name: Case 01 solo verdict, drafts and graphics recovery
+        run: node tests/live/practice-regression.cjs
       - name: Live social security and reconnect
         id: security
         run: node tests/live/security.cjs
       - name: Complete live co-op round and rematch
         if: ${{ !cancelled() && steps.security.outcome != 'skipped' }}
         run: node tests/live/coop.cjs
+      - name: Gameplay screenshots and measured device report
+        if: ${{ !cancelled() }}
+        run: node tests/live/presentation.cjs
+      - name: Preserve verification evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: submission-verification
+          path: |
+            release-evidence/
+            live-mobile-gameplay.png
+          if-no-files-found: ignore
+          retention-days: 14
