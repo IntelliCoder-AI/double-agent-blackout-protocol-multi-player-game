@@ -1,11 +1,13 @@
 // Eight independent Chromium guest contexts against the actual public HTTPS backend.
+// Use the supported live tactical renderer to isolate networking from eight simultaneous
+// software GPU contexts on a CPU-only CI runner. Separate suites verify actual 3D.
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs/promises');
 const {observeSnapshots}=require('../live/observe.cjs');
 const origin=process.env.BASE_URL||'https://double-agent-blackout-protocol-radhe12.vercel.app';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,label,ms=40000){const end=Date.now()+ms;while(Date.now()<end){if(await fn())return;await sleep(250);}throw Error('Timeout '+label);}
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});const clients=[],errors=[],latencies=[];await fs.mkdir('extended-evidence',{recursive:true});
+ const browser=await chromium.launch({headless:true,args:['--disable-webgl']});const clients=[],errors=[],latencies=[];await fs.mkdir('extended-evidence',{recursive:true});
  const observe=(c,page)=>{c.page=page;page.setDefaultTimeout(40000);page.on('pageerror',e=>errors.push(e.message));observeSnapshots(page,s=>c.snap=s);page.on('response',r=>{if(new URL(r.url()).pathname==='/api/sync'){const t=r.request().timing().responseEnd;if(t>0)latencies.push(t);}});};
  try{
   for(let i=0;i<8;i++){
@@ -22,7 +24,7 @@ async function until(fn,label,ms=40000){const end=Date.now()+ms;while(Date.now()
   assert.equal(clients.filter(c=>c.snap.self.role==='traitor').length,1);
   for(const c of clients){assert.ok(!('roles' in c.snap.room));assert.ok(!('culprit' in c.snap.room));assert.ok(c.snap.room.players.every(p=>!('role' in p)&&!('session' in p)));}
   const owner=clients.find(c=>c.snap.self.grants.includes('reader'));
-  async function go(c,name){const close=c.page.getByRole('button',{name:'Close panel',exact:true});if(await close.count())await close.click();await c.page.getByRole('button',{name:/Facility/}).click();await c.page.getByRole('button',{name:new RegExp(name)}).click();await until(async()=>!(await c.page.getByRole('button',{name:'Approach console',exact:true}).count()),'walk '+name,60000);}
+  async function go(c,name){const close=c.page.getByRole('button',{name:'Close panel',exact:true});if(await close.count())await close.click();await c.page.getByRole('button',{name:/Facility/}).click();await c.page.getByRole('button',{name:new RegExp(name)}).click();await c.page.getByRole('heading',{name:new RegExp(name)}).waitFor();await until(async()=>!(await c.page.getByRole('button',{name:'Approach console',exact:true}).count()),'walk '+name,60000);}
   await go(owner,'Vault access log');await owner.page.getByRole('button',{name:'Recover record',exact:true}).click();await until(()=>owner.snap.self.clues.some(c=>c.id==='reader'),'scan source');
   await owner.page.getByRole('button',{name:/Evidence Wall/}).click();await owner.page.getByRole('button',{name:'Walk to the wall',exact:true}).click();await until(()=>{const p=owner.snap.room.players.find(p=>p.id===owner.snap.self.id);return Math.hypot(p.x,p.z+3)<.6;},'wall arrival',60000);await owner.page.getByRole('button',{name:/Evidence Wall/}).click();await owner.page.getByLabel('Private record to publish').selectOption('reader');await owner.page.getByRole('button',{name:'Pin to wall',exact:true}).click();await until(()=>clients.every(c=>c.snap.room.board.some(e=>e.id==='reader')),'published source synchronization');
   // An eight-second outage must preserve this guest's identity and private role.

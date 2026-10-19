@@ -16,7 +16,7 @@ async function until(fn,label,ms=40000){const end=Date.now()+ms;while(Date.now()
   await page.screenshot({path:'release-evidence/main-menu.png'});
   await page.getByRole('button',{name:'Practice with bot',exact:true}).click();await page.getByLabel('Operative callsign').fill('Presentation QA');await page.getByRole('button',{name:'Create practice mission',exact:true}).click();await until(()=>snap?.room?.phase==='lobby','lobby');await page.getByRole('button',{name:'Mark ready',exact:true}).click();await page.getByRole('button',{name:'Begin lockdown',exact:true}).click();await until(()=>snap.room.phase==='investigation','investigation');
   for(const quality of ['low','high']){
-   await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('Graphics',{exact:true}).selectOption(quality);await page.getByRole('button',{name:'Measure 10 seconds',exact:true}).click();await page.getByRole('button',{name:'Close panel',exact:true}).click();
+   await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel(/^Graphics/).selectOption(quality);await page.getByRole('button',{name:'Measure 10 seconds',exact:true}).click();await page.getByRole('button',{name:'Close panel',exact:true}).click();
    await page.keyboard.down('a');await sleep(4500);await page.keyboard.up('a');await page.keyboard.down('d');await sleep(4500);await page.keyboard.up('d');await sleep(2500);
    await page.getByRole('button',{name:'Settings',exact:true}).click();await page.locator('.performance-readout').waitFor();const report=await page.locator('.performance-readout').innerText();reports.push({quality,report});await page.getByRole('button',{name:'Close panel',exact:true}).click();
   }
